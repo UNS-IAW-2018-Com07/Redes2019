@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     extern int errno; 
     //extern char *sys_errlist[]; 
     
-    const int portnum = 53; 
+    const int portnum = 126; 
     int socket_file_descriptor;
     struct sockaddr_in server;
     char buffer[1024];
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         exit(errno); 
     } 
     // Atender conexiones
-    if(recv(socket_file_descriptor, buffer, sizeof(buffer), 0))
+    if(recv(socket_file_descriptor, buffer, sizeof(buffer), 0)<0)
     {
         perror("Error al intentar comenzar a atender conexiones. \n");
         exit(errno); 

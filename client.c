@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     extern int errno; 
     //extern char *sys_errlist[]; 
     
-    const int portnum = 53; 
+    const int portnum = 126; 
     int socket_file_descriptor;
     struct sockaddr_in server;
     struct hostent *server_host; 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     server.sin_port = htons((short) portnum); 
     
     // Creacion del socket - devuelve -1 si da error 
-    if((socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0)))
+    if((socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0))<0)
     {
         perror("Error al intentar abrir el socket. \n");
         exit(errno); 
