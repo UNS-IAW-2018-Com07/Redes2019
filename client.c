@@ -12,7 +12,7 @@
 #include "message_elements.c"
 
 in_addr_t get_query_server();
-void ChangetoDnsNameFormat(unsigned char* dns,unsigned char* host);
+void ChangeToQNameFormat(unsigned char* qname, unsigned char* hostname);
 
 int main( int argc , char *argv[])
 {
@@ -48,19 +48,11 @@ int main( int argc , char *argv[])
     query_header->ar_count = 0;
 
     unsigned char *qname = (unsigned char *) &query[sizeof(struct DNS_HEADER)];
-    ChangetoDnsNameFormat(qname, hostname);
+    ChangeToQNameFormat(qname, hostname);
 
     struct QUESTION_CONSTANT *q_constant = (struct QUESTION_CONSTANT *) &query[sizeof(struct DNS_HEADER)+ (strlen((const char*)qname) + 1)];
     q_constant->qtype = htons(qtype);
     q_constant->qclass = htons(1); // Poner una constante para internet
-    //struct QUESTION *query_question = (struct QUESTION *) &query[sizeof(struct DNS_HEADER)];
-    //unsigned char *qname = malloc(sizeof(hostname)+2);
-    //qname = query_question->qname;
-    //ChangetoDnsNameFormat(qname, hostname);
-    //query_question->qname = hostname;
-    //&query_question->qtype = 
-    //query_question->qtype = htons(qtype);
-    //query_question->qclass = htons(1); // Poner una constante para internet
 
     // Creacion del socket - devuelve -1 si da error 
     if((socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0))<0)
@@ -69,6 +61,7 @@ int main( int argc , char *argv[])
         exit(errno); 
     }
 
+    /*
     printf("Id:: %d \n",ntohs(query_header->id));
     printf("Puntero Id:: %p \n",&query_header->id);
     
@@ -86,6 +79,7 @@ int main( int argc , char *argv[])
     printf("AnswerCount:: %d \n",ntohs(query_header->an_count));
     printf("NsCount:: %d \n",ntohs(query_header->ns_count));
     printf("ArCount:: %d \n",ntohs(query_header->ar_count));
+    */ 
 
     if((sendto(socket_file_descriptor, query, sizeof(struct DNS_HEADER) +  (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT), 0, (struct sockaddr*)&server, sizeof(server)))<0)
     {
@@ -107,8 +101,7 @@ int main( int argc , char *argv[])
     printf("[+]Data Received: %li \n", strlen(response));
 
     printf("Id:: %d \n",ntohs(query_response->id));
-    printf("Puntero Id:: %p \n",&query_response->id);
-
+ 
     printf("Rd:: %d \n",ntohs(query_response->rd));
     printf("TC:: %d \n",ntohs(query_response->tc));
     printf("AA:: %d \n",ntohs(query_response->aa));
@@ -160,28 +153,33 @@ in_addr_t get_query_server()
 }
 
 /*
- * This will convert www.google.com to 3www6google3com got it :)
+ * Convierte por ejemplo: www.google.com a 3www6google3com 
  * */
-void ChangetoDnsNameFormat(unsigned char* dns,unsigned char* host) 
+void ChangeToQNameFormat(unsigned char* qname, unsigned char* hostname) 
 {
-    unsigned char *host_copy = malloc(sizeof(strlen(host) + 1));
-    strcpy(host_copy,host);
+    int host_length = strlen(hostname) + 1;
+    unsigned char *host_copy = malloc(sizeof(host_length));
+    strcpy(host_copy, hostname);
+    strcat((char *) host_copy, ".");
 
-    int lock = 0 , i;
-    strcat((char *) host_copy,".");
+    int qname_position = 0, hostname_position;
      
-    for(i = 0 ; i < strlen((char*)host_copy) ; i++) 
+    for(hostname_position = 0; hostname_position < host_length; hostname_position++) 
     {
-        if(host_copy[i]=='.') 
+        if(host_copy[hostname_position] == '.') 
         {
-            *dns++ = i-lock;
-            for(;lock<i;lock++) 
+            *qname = hostname_position - qname_position;
+            qname++; 
+
+            while(qname_position < hostname_position) 
             {
-                *dns++=host_copy[lock];
+                *qname = host_copy[qname_position];
+                qname++;
+                qname_position++;
             }
-            lock++; //or lock=i+1;
+            qname_position++; 
         }
     }
-    *dns++='\0';
+    *qname='\0';
     free(host_copy);
 }
