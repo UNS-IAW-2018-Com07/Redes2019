@@ -10,17 +10,20 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "message_elements.c"
+#include "command_line_manager.h"
 
 in_addr_t get_query_server();
-void ChangeToQNameFormat(unsigned char* qname, unsigned char* hostname);
 
 int main( int argc , char *argv[])
 {
+    setInputValues(argc,argv);
+    extern int errno; 
+
+    // Lo que ingresa el usuario
     unsigned char* hostname= "www.google.com";
     unsigned short qtype = 1;
-    extern int errno; 
-    
     const int portnum = 53; 
+    
     int socket_file_descriptor;
     struct sockaddr_in server;
     char query[65536];
@@ -150,36 +153,4 @@ in_addr_t get_query_server()
         }
     }
     return inet_addr("8.8.8.8"); 
-}
-
-/*
- * Convierte por ejemplo: www.google.com a 3www6google3com 
- * */
-void ChangeToQNameFormat(unsigned char* qname, unsigned char* hostname) 
-{
-    int host_length = strlen(hostname) + 1;
-    unsigned char *host_copy = malloc(sizeof(host_length));
-    strcpy(host_copy, hostname);
-    strcat((char *) host_copy, ".");
-
-    int qname_position = 0, hostname_position;
-     
-    for(hostname_position = 0; hostname_position < host_length; hostname_position++) 
-    {
-        if(host_copy[hostname_position] == '.') 
-        {
-            *qname = hostname_position - qname_position;
-            qname++; 
-
-            while(qname_position < hostname_position) 
-            {
-                *qname = host_copy[qname_position];
-                qname++;
-                qname_position++;
-            }
-            qname_position++; 
-        }
-    }
-    *qname='\0';
-    free(host_copy);
 }

@@ -1,2 +1,6 @@
 struct DNS_HEADER;
-typedef struct DNS_HEADER *dns_server;
+typedef struct DNS_HEADER *DNS_HEADER_POINTER; 
+struct QUESTION_CONSTANT;
+typedef struct QUESTION_CONSTANT *QUESTION_CONSTANT_POINTER;
+struct RES_RECORD;
+typedef struct RES_RECORD *RES_RECORD_POINTER;
