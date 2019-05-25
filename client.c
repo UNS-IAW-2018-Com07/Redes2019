@@ -12,7 +12,19 @@
 #include "message_elements.c"
 #include "command_line_manager.h"
 
-in_addr_t get_query_server();
+// Tipos de RR 
+#define T_A 1 
+#define T_NS 2 
+#define T_CNAME 5 
+#define T_SOA 6 
+#define T_PTR 12 
+#define T_MX 15 
+#define T_LOC 29
+
+in_addr_t getQueryServer();
+void readAnswers();
+unsigned char* readName();
+void printAnswers();
 
 int main( int argc , char *argv[])
 {
@@ -26,9 +38,11 @@ int main( int argc , char *argv[])
     const int portnum = getPort(); 
     
     int socket_file_descriptor;
+    struct sockaddr_in aux;
     struct sockaddr_in server;
-    char query[65536];
-    char response[65536];
+    unsigned char query[65536], response[65536], *qname, *reader;
+
+    struct RES_RECORD answers[20],auth[20],addit[20];
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
@@ -51,8 +65,8 @@ int main( int argc , char *argv[])
     query_header->ns_count = 0;
     query_header->ar_count = 0;
 
-    unsigned char *qname = (unsigned char *) &query[sizeof(struct DNS_HEADER)];
-    ChangeToQNameFormat(qname, hostname);
+    qname = (unsigned char *) &query[sizeof(struct DNS_HEADER)];
+    changeToQNameFormat(qname, hostname);
 
     struct QUESTION_CONSTANT *q_constant = (struct QUESTION_CONSTANT *) &query[sizeof(struct DNS_HEADER)+ (strlen((const char*)qname) + 1)];
     q_constant->qtype = htons(qtype);
@@ -64,8 +78,8 @@ int main( int argc , char *argv[])
         perror("Error al intentar abrir el socket. \n");
         exit(errno); 
     }
-
     
+    /*
     printf("Id:: %d \n",ntohs(query_header->id));
     printf("Puntero Id:: %p \n",&query_header->id);
     
@@ -83,6 +97,7 @@ int main( int argc , char *argv[])
     printf("AnswerCount:: %d \n",ntohs(query_header->an_count));
     printf("NsCount:: %d \n",ntohs(query_header->ns_count));
     printf("ArCount:: %d \n",ntohs(query_header->ar_count));
+    */
 
     if((sendto(socket_file_descriptor, query, sizeof(struct DNS_HEADER) +  (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT), 0, (struct sockaddr*)&server, sizeof(server)))<0)
     {
@@ -93,18 +108,24 @@ int main( int argc , char *argv[])
     
     int i = sizeof server; 
     struct DNS_HEADER *query_response = (struct DNS_HEADER *) response;
-    query_response->id=ntohs(62);
-    printf("id:: %d \n",ntohs(query_response->id));
-
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
     {
         perror("Error al intentar comenzar a atender conexiones. \n");
         exit(errno); 
     }
+
+    reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
+    printf("\nThe response contains : ");
+    printf("\n %d Questions.",ntohs(query_response->qd_count));
+    printf("\n %d Answers.",ntohs(query_response->an_count));
+    printf("\n %d Authoritative Servers.",ntohs(query_response->ns_count));
+    printf("\n %d Additional records.\n\n",ntohs(query_response->ar_count));
+
+/*
     printf("[+]Data Received: %li \n", strlen(response));
 
     printf("Id:: %d \n",ntohs(query_response->id));
- 
+
     printf("Rd:: %d \n",ntohs(query_response->rd));
     printf("TC:: %d \n",ntohs(query_response->tc));
     printf("AA:: %d \n",ntohs(query_response->aa));
@@ -123,6 +144,156 @@ int main( int argc , char *argv[])
     printf("AnswerCount:: %d \n",ntohs(query_response->an_count));
     printf("NsCount:: %d \n",ntohs(query_response->ns_count));
     printf("ArCount:: %d \n",ntohs(query_response->ar_count));
-    
+    */
+
+    readAnswers(reader, response, query_response, answers);
+
+    //print answers
+    printf("\nAnswer Records : %d \n" , ntohs(query_response->an_count) );
+    for(i=0 ; i < ntohs(query_response->an_count) ; i++)
+    {
+        printf("Name : %s ",answers[i].name);
+ 
+        if( ntohs(answers[i].resource_constant->type) == T_A) //IPv4 address
+        {
+            long *p;
+            p=(long*)answers[i].rdata;
+            aux.sin_addr.s_addr=(*p); //working without ntohl
+            printf("has IPv4 address : %s",inet_ntoa(aux.sin_addr));
+        }
+         
+        if(ntohs(answers[i].resource_constant->type)==T_CNAME) 
+        {
+            printf("has alias name : %s",answers[i].rdata);
+        }
+ 
+        printf("\n");
+    }
+
     return 0;
+}
+
+void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEADER *query_response, struct RES_RECORD *answers)
+{ 
+    int stop = 0;
+ 
+    for(int i=0;i<ntohs(query_response->an_count);i++)
+    {
+        printf("stop antes:: %i \n", stop); 
+        printf("reader:: %s \n", reader);
+        answers[i].name = readName(reader,response,&stop);
+        printf("stop dsp:: %i \n", stop); 
+        reader = reader + stop;
+        printf("reader + stop:: %s \n", reader+1);
+ 
+        answers[i].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
+        reader = reader + sizeof(struct RES_RECORD_CONSTANT);
+
+        int answer_type = ntohs(answers[i].resource_constant->type);
+        switch(answer_type)
+        {
+            case 1: // A
+            {
+                answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len));
+                for(int j=0; j<ntohs(answers[i].resource_constant->data_len); j++)
+                {
+                    answers[i].rdata[j]=reader[j];
+                }
+                answers[i].rdata[ntohs(answers[i].resource_constant->data_len)] = '\0';
+                reader = reader + ntohs(answers[i].resource_constant->data_len);
+            }; break;
+            /*
+            case 15: // MX
+            {
+
+            }; break;
+            case 29: // LOC
+            {
+                
+            }; break;
+            */
+            default: 
+            {
+                //No se si sirve para alguno de estos dos 
+                printf("entra al default %i \n", stop); 
+                printf("entra al default %s \n", reader); 
+                answers[i].rdata = readName(reader,response,&stop);
+                printf("sale del default %i \n", stop); 
+                reader = reader + stop;
+            }    
+        }
+    }
+}
+
+unsigned char* readName(unsigned char* reader,unsigned char* buffer,int* count)
+{
+    unsigned char *name;
+    unsigned int p = 0, jumped = 0, offset;
+    int i, j;
+ 
+    *count = 1;
+    name = (unsigned char*) malloc(256);
+ 
+    // mascara para obtener los dos bits mas significativos
+    int bitMask = 49152; // 1100 0000 0000 0000
+    name[0]='\0';
+ 
+    //read the names in 3www6google3com format
+    while(*reader!=0)
+    {
+        if(*reader>=192)
+        {
+            offset = (*reader)*256 + *(reader+1) - bitMask; 
+            reader = buffer + offset - 1;
+            jumped = 1; //we have jumped to another location so counting wont go up!
+        }
+        else
+        {
+            name[p++]=*reader;
+        }
+ 
+        reader = reader+1;
+ 
+        if(jumped==0)
+        {
+            *count = *count + 1; //if we havent jumped to another location then we can count up
+        }
+    }
+ 
+    name[p]='\0'; //caracter terminador
+    if(jumped==1)
+    {
+        *count = *count + 1; //number of steps we actually moved forward in the packet
+    }
+ 
+    changeFromQNameFormatToNormalFormat(name);
+    return name;
+}
+
+/*
+ * Get the query servers from /etc/resolv.conf file on Linux
+ * */
+in_addr_t getQueryServer()
+{
+    FILE *nameservers_file;
+    char readed_line[200], *query_address;
+
+    if((nameservers_file = fopen("/etc/resolv.conf", "r")) == NULL)
+    {
+        printf("ACA DEBERIAMOS DECIR QUE NO SE PUDO REALIZAR LA CONSULTA PRQUE NO HAY query EN LOS PARAMS NI SABEMOS EL DEFAULT  \n");
+    }
+    
+    while(fgets(readed_line, 200 ,nameservers_file))
+    {
+        if(readed_line[0] != '#')
+        {
+            if(strncmp(readed_line, "nameserver", 10) == 0)
+            {
+                query_address = strtok(readed_line, " ");
+                query_address = strtok(NULL, " ");
+                return inet_addr(query_address);
+            }
+        }
+    }
+    return inet_addr("8.8.8.8"); 
 }

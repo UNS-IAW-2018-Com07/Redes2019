@@ -34,13 +34,23 @@ struct QUESTION_CONSTANT
     unsigned short qclass;  // clase de la consulta: IN (internet)
 };
 
-struct RES_RECORD
+struct RES_RECORD_CONSTANT
 {
-    unsigned char *name;     // nombre simbolico al cual pertenece el resource record
-    unsigned short type;     // tipo del campo del dns. Especifica el significado de la informacion que contiene rdata
+    unsigned short type;   /* tipo del campo del dns. Especifica el significado de la informacion que contiene rdata
+                            * A = 1 
+                            * LOC = 29
+                            * MX = 15
+                            * */
+
     unsigned short _class;   // clase de los datos que se encuentran en el campo rdata
     unsigned int ttl;        // tiempo en segundos que el resource record puede ser cacheado antes de ser descartado (tiempo de vida)
     unsigned short data_len; // tamanio en bytes del campo rdata
+};
+
+struct RES_RECORD
+{
+    unsigned char *name;     // nombre simbolico al cual pertenece el resource record
+    struct RES_RECORD_CONSTANT *resource_constant; 
     unsigned char *rdata;    // describe el recurso. Depende del TYPE y de la CLASS
 };
 
@@ -50,7 +60,7 @@ struct RES_RECORD
  * La longitud es un entero de un byte que representa la cantidad de caracteres de un dato. 
  * Convierte por ejemplo: www.uns.edu.ar a 3www3uns3edu2ar 
  */
-void ChangeToQNameFormat(unsigned char* qname, unsigned char* hostname) 
+void changeToQNameFormat(unsigned char* qname, unsigned char* hostname) 
 {
     int host_length = strlen(hostname) + 1;
     unsigned char *host_copy = malloc(sizeof(host_length));
@@ -77,4 +87,27 @@ void ChangeToQNameFormat(unsigned char* qname, unsigned char* hostname)
     }
     *qname='\0';
     free(host_copy);
+}
+
+/*
+ * Inversa al metodo anterior. 
+ * Convierte por ejemplo: 3www3uns3edu2ar a www.uns.edu.ar 
+ */
+void changeFromQNameFormatToNormalFormat(unsigned char* qname) 
+{
+    int qname_length =  (int) strlen((const char*) qname);
+    int position_length = 0, i;
+     
+    for(i = 0; i < qname_length; i++) 
+    {
+        position_length = qname[i];
+        for(int j = 0; j < (int)position_length; j++) 
+        {
+            qname[i]=qname[i+1];
+            i++;
+        }
+        qname[i]='.';
+    }
+    qname[i-1]='\0'; // removemos el ultimo punto innecesario
+    printf("qname:: %s\n\n",qname);
 }
