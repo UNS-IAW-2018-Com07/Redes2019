@@ -18,8 +18,7 @@ struct DNS_HEADER
                              *  (3) El dominio referenciado no existe. Solamente tiene significado cuando responde un DNS autoritativo 
                              *  (4) El dns no soporta la consulta requerida
                              *  (5) El dns se rehusa a realizar la operacion especificada por razones de politicas
-                            */  
-                                 
+                            */        
     unsigned char z :3;      // tiene que valer 0. Reservado para uso futuro
     unsigned char ra :1;     // especifica si el servidor puede responder recursivamente
     

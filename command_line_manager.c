@@ -14,13 +14,21 @@ unsigned char rd;
 
 void showHelp()
 {
-    printf("Help");
+    printf("\nUsage: query consulta @servidor[:puerto] [-a | -mx | -loc] [-r | -t] [-h] \n\n");
+    printf("  :puerto     \n");
+    printf("  -a          La consulta se trata de un nombre simbolico y se \n");
+    printf("              desea conocer su correspondiente IP numerico asociado. \n");
+    printf("  -mx         \n");
+    printf("  -loc        \n");
+    printf("  -r          \n");
+    printf("  -t          \n");
+    printf("  -h          \n\n");
 }
 
 struct argp_option options[] = 
 {
-    { "hola", 'a', 0, 0, "La consulta se trata de un nombre simbolico y se desea conocer su correspondiente IP numerico asociado" },
-    { "help", 'h', 0, 0, 0},
+    { 0, 'a', 0, 0, 0 },
+    { "help", 'h', 0, 0, 0 },
     { 0 }
 };
 
@@ -55,14 +63,13 @@ extern void argp_usage (const struct argp_state *__state){
 
 void setInputValues(int argc, char* argv[])
 {
-    //argp_help(&argp,,0,0);
     printf("Error %i \n", argp_parse(&argp,argc,argv,ARGP_NO_HELP,0,0));
 }
 
 
 unsigned char* getHostname()
 {
-
+    return hostname; 
 }
 
 in_addr_t getServer(); 

@@ -31,7 +31,7 @@ int main( int argc , char *argv[])
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
-    server.sin_addr.s_addr = inet_addr("8.8.8.8");
+    server.sin_addr.s_addr = inet_addr("127.0.0.53");
     //get_query_server();
     server.sin_port = htons((short) portnum); 
 
@@ -41,7 +41,7 @@ int main( int argc , char *argv[])
     query_header->opcode = 0; 
     query_header->aa = 0; 
     query_header->tc = 0; 
-    query_header->rd = 0; 
+    query_header->rd = 1; //chequear esto
     query_header->ra = 0; 
     query_header->z = 0;
     query_header->rcode = 0;
