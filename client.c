@@ -17,12 +17,13 @@ in_addr_t get_query_server();
 int main( int argc , char *argv[])
 {
     setInputValues(argc,argv);
+
     extern int errno; 
 
     // Lo que ingresa el usuario
-    unsigned char* hostname= "www.google.com";
-    unsigned short qtype = 1;
-    const int portnum = 53; 
+    unsigned char* hostname= getHostname();
+    unsigned short qtype = getQType();
+    const int portnum = getPort(); 
     
     int socket_file_descriptor;
     struct sockaddr_in server;
@@ -31,7 +32,7 @@ int main( int argc , char *argv[])
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
-    server.sin_addr.s_addr = inet_addr("127.0.0.53");
+    server.sin_addr.s_addr = getServer();
     //get_query_server();
     server.sin_port = htons((short) portnum); 
 
@@ -41,7 +42,7 @@ int main( int argc , char *argv[])
     query_header->opcode = 0; 
     query_header->aa = 0; 
     query_header->tc = 0; 
-    query_header->rd = 1; //chequear esto
+    query_header->rd = getRD();
     query_header->ra = 0; 
     query_header->z = 0;
     query_header->rcode = 0;
@@ -64,11 +65,11 @@ int main( int argc , char *argv[])
         exit(errno); 
     }
 
-    /*
+    
     printf("Id:: %d \n",ntohs(query_header->id));
     printf("Puntero Id:: %p \n",&query_header->id);
     
-    printf("Rd:: %d \n",ntohs(query_header->rd));
+    printf("Rd:: %d \n",query_header->rd);
     printf("TC:: %d \n",ntohs(query_header->tc));
     printf("AA:: %d \n",ntohs(query_header->aa));
     printf("opcode:: %d \n",ntohs(query_header->opcode));
@@ -82,7 +83,6 @@ int main( int argc , char *argv[])
     printf("AnswerCount:: %d \n",ntohs(query_header->an_count));
     printf("NsCount:: %d \n",ntohs(query_header->ns_count));
     printf("ArCount:: %d \n",ntohs(query_header->ar_count));
-    */ 
 
     if((sendto(socket_file_descriptor, query, sizeof(struct DNS_HEADER) +  (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT), 0, (struct sockaddr*)&server, sizeof(server)))<0)
     {
@@ -125,32 +125,4 @@ int main( int argc , char *argv[])
     printf("ArCount:: %d \n",ntohs(query_response->ar_count));
     
     return 0;
-}
-
-/*
- * Get the query servers from /etc/resolv.conf file on Linux
- * */
-in_addr_t get_query_server()
-{
-    FILE *nameservers_file;
-    char readed_line[200], *query_address;
-
-    if((nameservers_file = fopen("/etc/resolv.conf", "r")) == NULL)
-    {
-        printf("ACA DEBERIAMOS DECIR QUE NO SE PUDO REALIZAR LA CONSULTA PRQUE NO HAY query EN LOS PARAMS NI SABEMOS EL DEFAULT  \n");
-    }
-    
-    while(fgets(readed_line, 200 ,nameservers_file))
-    {
-        if(readed_line[0] != '#')
-        {
-            if(strncmp(readed_line, "nameserver", 10) == 0)
-            {
-                query_address = strtok(readed_line, " ");
-                query_address = strtok(NULL, " ");
-                return inet_addr(query_address);
-            }
-        }
-    }
-    return inet_addr("8.8.8.8"); 
 }
