@@ -1,4 +1,6 @@
-#include "message_elements.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 struct DNS_HEADER
 {
@@ -34,6 +36,7 @@ struct QUESTION_CONSTANT
     unsigned short qclass;  // clase de la consulta: IN (internet)
 };
 
+#pragma pack(push, 1)
 struct RES_RECORD_CONSTANT
 {
     unsigned short type;   /* tipo del campo del dns. Especifica el significado de la informacion que contiene rdata
@@ -46,6 +49,7 @@ struct RES_RECORD_CONSTANT
     unsigned int ttl;        // tiempo en segundos que el resource record puede ser cacheado antes de ser descartado (tiempo de vida)
     unsigned short data_len; // tamanio en bytes del campo rdata
 };
+#pragma pack(pop)
 
 struct RES_RECORD
 {
@@ -103,11 +107,10 @@ void changeFromQNameFormatToNormalFormat(unsigned char* qname)
         position_length = qname[i];
         for(int j = 0; j < (int)position_length; j++) 
         {
-            qname[i]=qname[i+1];
+            qname[i] = qname[i+1];
             i++;
         }
         qname[i]='.';
     }
     qname[i-1]='\0'; // removemos el ultimo punto innecesario
-    printf("qname:: %s\n\n",qname);
 }

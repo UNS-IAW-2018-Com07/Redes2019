@@ -47,7 +47,6 @@ int main( int argc , char *argv[])
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
     server.sin_addr.s_addr = getServer();
-    //get_query_server();
     server.sin_port = htons((short) portnum); 
 
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
@@ -107,19 +106,19 @@ int main( int argc , char *argv[])
     printf("Data Sent \n");
     
     int i = sizeof server; 
-    struct DNS_HEADER *query_response = (struct DNS_HEADER *) response;
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
     {
         perror("Error al intentar comenzar a atender conexiones. \n");
         exit(errno); 
     }
 
+    struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
     printf("\nThe response contains : ");
-    printf("\n %d Questions.",ntohs(query_response->qd_count));
-    printf("\n %d Answers.",ntohs(query_response->an_count));
-    printf("\n %d Authoritative Servers.",ntohs(query_response->ns_count));
-    printf("\n %d Additional records.\n\n",ntohs(query_response->ar_count));
+    printf("\n %d Questions.",ntohs(query_response_header->qd_count));
+    printf("\n %d Answers.",ntohs(query_response_header->an_count));
+    printf("\n %d Authoritative Servers.",ntohs(query_response_header->ns_count));
+    printf("\n %d Additional records.\n\n",ntohs(query_response_header->ar_count));
 
 /*
     printf("[+]Data Received: %li \n", strlen(response));
@@ -146,25 +145,25 @@ int main( int argc , char *argv[])
     printf("ArCount:: %d \n",ntohs(query_response->ar_count));
     */
 
-    readAnswers(reader, response, query_response, answers);
+    readAnswers(reader, response, query_response_header, answers);
 
     //print answers
-    printf("\nAnswer Records : %d \n" , ntohs(query_response->an_count) );
-    for(i=0 ; i < ntohs(query_response->an_count) ; i++)
+    printf("\nAnswer Records : %d \n" , ntohs(query_response_header->an_count) );
+    for(i = 0; i < ntohs(query_response_header->an_count); i++)
     {
-        printf("Name : %s ",answers[i].name);
+        printf("Name : %s ", answers[i].name);
  
-        if( ntohs(answers[i].resource_constant->type) == T_A) //IPv4 address
+        if(ntohs(answers[i].resource_constant->type) == T_A) //IPv4 address
         {
             long *p;
-            p=(long*)answers[i].rdata;
+            p = (long*)answers[i].rdata;
             aux.sin_addr.s_addr=(*p); //working without ntohl
-            printf("has IPv4 address : %s",inet_ntoa(aux.sin_addr));
+            printf("has IPv4 address : %s", inet_ntoa(aux.sin_addr));
         }
          
-        if(ntohs(answers[i].resource_constant->type)==T_CNAME) 
+        if(ntohs(answers[i].resource_constant->type) == T_CNAME) 
         {
-            printf("has alias name : %s",answers[i].rdata);
+            printf("has alias name : %s", answers[i].rdata);
         }
  
         printf("\n");
@@ -173,18 +172,14 @@ int main( int argc , char *argv[])
     return 0;
 }
 
-void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEADER *query_response, struct RES_RECORD *answers)
+void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEADER *query_response_header, struct RES_RECORD *answers)
 { 
     int stop = 0;
  
-    for(int i=0;i<ntohs(query_response->an_count);i++)
+    for(int i=0;i<ntohs(query_response_header->an_count);i++)
     {
-        printf("stop antes:: %i \n", stop); 
-        printf("reader:: %s \n", reader);
-        answers[i].name = readName(reader,response,&stop);
-        printf("stop dsp:: %i \n", stop); 
+        answers[i].name = readName(reader, response, &stop);
         reader = reader + stop;
-        printf("reader + stop:: %s \n", reader+1);
  
         answers[i].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
         reader = reader + sizeof(struct RES_RECORD_CONSTANT);
@@ -195,7 +190,7 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
             case 1: // A
             {
                 answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len));
-                for(int j=0; j<ntohs(answers[i].resource_constant->data_len); j++)
+                for(int j = 0; j < ntohs(answers[i].resource_constant->data_len); j++)
                 {
                     answers[i].rdata[j]=reader[j];
                 }
@@ -215,17 +210,14 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
             default: 
             {
                 //No se si sirve para alguno de estos dos 
-                printf("entra al default %i \n", stop); 
-                printf("entra al default %s \n", reader); 
-                answers[i].rdata = readName(reader,response,&stop);
-                printf("sale del default %i \n", stop); 
+                answers[i].rdata = readName(reader, response, &stop);
                 reader = reader + stop;
             }    
         }
     }
 }
 
-unsigned char* readName(unsigned char* reader,unsigned char* buffer,int* count)
+unsigned char* readName(unsigned char* reader, unsigned char* buffer, int* count)
 {
     unsigned char *name;
     unsigned int p = 0, jumped = 0, offset;
@@ -239,9 +231,9 @@ unsigned char* readName(unsigned char* reader,unsigned char* buffer,int* count)
     name[0]='\0';
  
     //read the names in 3www6google3com format
-    while(*reader!=0)
+    while(*reader != 0)
     {
-        if(*reader>=192)
+        if(*reader >= 192)
         {
             offset = (*reader)*256 + *(reader+1) - bitMask; 
             reader = buffer + offset - 1;
@@ -249,19 +241,19 @@ unsigned char* readName(unsigned char* reader,unsigned char* buffer,int* count)
         }
         else
         {
-            name[p++]=*reader;
+            name[p++] = *reader;
         }
  
-        reader = reader+1;
+        reader = reader + 1;
  
-        if(jumped==0)
+        if(jumped == 0)
         {
             *count = *count + 1; //if we havent jumped to another location then we can count up
         }
     }
  
-    name[p]='\0'; //caracter terminador
-    if(jumped==1)
+    name[p] = '\0'; //caracter terminador
+    if(jumped == 1)
     {
         *count = *count + 1; //number of steps we actually moved forward in the packet
     }
