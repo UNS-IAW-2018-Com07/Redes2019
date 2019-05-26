@@ -11,15 +11,7 @@
 #include <unistd.h>
 #include "message_elements.c"
 #include "command_line_manager.h"
-
-// Tipos de RR 
-#define T_A 1 
-#define T_NS 2 
-#define T_CNAME 5 
-#define T_SOA 6 
-#define T_PTR 12 
-#define T_MX 15 
-#define T_LOC 29
+#include "location_reader.c"
 
 in_addr_t getQueryServer();
 void readAnswers();
@@ -165,6 +157,11 @@ int main( int argc , char *argv[])
         {
             printf("has alias name : %s", answers[i].rdata);
         }
+
+        if(ntohs(answers[i].resource_constant->type) == T_LOC) 
+        {
+            printf(" tiene la siguiente información geográfica: %s", answers[i].rdata);
+        }
  
         printf("\n");
     }
@@ -202,11 +199,10 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
             {
 
             }; break;
-            case 29: // LOC
+            */case 29: // LOC
             {
-                
+                answers[i].rdata = (unsigned char*)loc_ntoa(reader, NULL);
             }; break;
-            */
             default: 
             {
                 //No se si sirve para alguno de estos dos 
@@ -260,32 +256,4 @@ unsigned char* readName(unsigned char* reader, unsigned char* buffer, int* count
  
     changeFromQNameFormatToNormalFormat(name);
     return name;
-}
-
-/*
- * Get the query servers from /etc/resolv.conf file on Linux
- * */
-in_addr_t getQueryServer()
-{
-    FILE *nameservers_file;
-    char readed_line[200], *query_address;
-
-    if((nameservers_file = fopen("/etc/resolv.conf", "r")) == NULL)
-    {
-        printf("ACA DEBERIAMOS DECIR QUE NO SE PUDO REALIZAR LA CONSULTA PRQUE NO HAY query EN LOS PARAMS NI SABEMOS EL DEFAULT  \n");
-    }
-    
-    while(fgets(readed_line, 200 ,nameservers_file))
-    {
-        if(readed_line[0] != '#')
-        {
-            if(strncmp(readed_line, "nameserver", 10) == 0)
-            {
-                query_address = strtok(readed_line, " ");
-                query_address = strtok(NULL, " ");
-                return inet_addr(query_address);
-            }
-        }
-    }
-    return inet_addr("8.8.8.8"); 
 }

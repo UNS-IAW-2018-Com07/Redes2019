@@ -36,7 +36,9 @@ struct QUESTION_CONSTANT
     unsigned short qclass;  // clase de la consulta: IN (internet)
 };
 
-#pragma pack(push, 1)
+#pragma pack(push, 1) 
+// Apila en la pila interna el valor anterior para linear los campos de las estructuras.
+// A continuación ajusta el nuevo valor para alinear los campos.
 struct RES_RECORD_CONSTANT
 {
     unsigned short type;   /* tipo del campo del dns. Especifica el significado de la informacion que contiene rdata
@@ -50,6 +52,7 @@ struct RES_RECORD_CONSTANT
     unsigned short data_len; // tamanio en bytes del campo rdata
 };
 #pragma pack(pop)
+// Ajusta el valor para alinear los campos de las estructuras al último que se utilizó.
 
 struct RES_RECORD
 {

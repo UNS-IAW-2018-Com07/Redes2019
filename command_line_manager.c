@@ -224,29 +224,28 @@ unsigned char getRD()
 }
 
 /*
- * Get the query servers from /etc/resolv.conf file on Linux
+ * Obtiene el servidor dns del archivo /etc/resolv.conf
  * */
 in_addr_t getDefaultDNSServer()
 {
     FILE *nameservers_file;
     char readed_line[200], *query_address;
 
-    if((nameservers_file = fopen("/etc/resolv.conf", "r")) == NULL)
+    if((nameservers_file = fopen("/etc/resolv.conf", "r")) != NULL)
     {
-        printf("ACA DEBERIAMOS DECIR QUE NO SE PUDO REALIZAR LA CONSULTA PRQUE NO HAY query EN LOS PARAMS NI SABEMOS EL DEFAULT  \n");
-    }
-    
-    while(fgets(readed_line, 200 ,nameservers_file))
-    {
-        if(readed_line[0] != '#')
+        while(fgets(readed_line, 200 ,nameservers_file))
         {
-            if(strncmp(readed_line, "nameserver", 10) == 0)
+            if(readed_line[0] != '#')
             {
-                query_address = strtok(readed_line, " ");
-                query_address = strtok(NULL, " ");
-                return inet_addr(query_address);
+                if(strncmp(readed_line, "nameserver", 10) == 0)
+                {
+                    query_address = strtok(readed_line, " ");
+                    query_address = strtok(NULL, " ");
+                    return inet_addr(query_address);
+                }
             }
         }
     }
-    return inet_addr("8.8.8.8"); 
+    showError("No se especificó un servidor y no se tiene uno por defecto");
+    exit(EXIT_FAILURE);
 }
