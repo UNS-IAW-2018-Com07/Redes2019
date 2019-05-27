@@ -2,10 +2,10 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include "query_sender.h"
+#include "query_manager.h"
 #include "message_elements.h"
 
-unsigned char query[65536];
+unsigned char query[65536], response[65536];
 
 unsigned char* sendQuery(
     struct sockaddr_in server,
@@ -34,14 +34,24 @@ unsigned char* sendQuery(
 
     struct QUESTION_CONSTANT *q_constant = (struct QUESTION_CONSTANT *) &query[sizeof(struct DNS_HEADER)+ (strlen((const char*)qname) + 1)];
     q_constant->qtype = htons(qtype);
-    q_constant->qclass = htons(1); // Poner una constante para internet
+    q_constant->qclass = htons(1);
 
     if((sendto(socket_file_descriptor, query, sizeof(struct DNS_HEADER) +  (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT), 0, (struct sockaddr*)&server, sizeof(server)))<0)
     {
         perror("Error al intentar enviar un mensaje al servidor. \n");
         exit(errno); 
-    }
-    printf("\n\tDatos enviados.\n");    
+    }  
 
     return qname;
+}
+
+unsigned char* receiveQuery(struct sockaddr_in server, int socket_file_descriptor)
+{
+    int i = sizeof server; 
+    if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
+    {
+        perror("Error al intentar comenzar a atender conexiones. \n");
+        exit(errno); 
+    }
+    return response;
 }

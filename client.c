@@ -10,9 +10,8 @@
 #include <arpa/inet.h>
 
 #include "dns_response_handler.h"
-//#include "message_elements.h"
 #include "command_line_manager.h"
-#include "query_sender.h"
+#include "query_manager.h"
 
 int main( int argc , char *argv[])
 {
@@ -20,7 +19,7 @@ int main( int argc , char *argv[])
     
     int socket_file_descriptor;
     struct sockaddr_in server;
-    unsigned char response[65536], *reader;
+    unsigned char *reader;
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
@@ -36,13 +35,8 @@ int main( int argc , char *argv[])
 
     unsigned char *qname = sendQuery(server, socket_file_descriptor, getRD(), getHostname(), getQType());
 
-    int i = sizeof server; 
-    if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
-    {
-        perror("Error al intentar comenzar a atender conexiones. \n");
-        exit(errno); 
-    }
-
+    unsigned char *response = receiveQuery(server, socket_file_descriptor);
+    
     struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
     

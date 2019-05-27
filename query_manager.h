@@ -6,3 +6,5 @@ unsigned char* sendQuery(
     unsigned char rd,
     char *hostname,
     unsigned short qtype);
+
+unsigned char* receiveQuery(struct sockaddr_in server, int socket_file_descriptor);
