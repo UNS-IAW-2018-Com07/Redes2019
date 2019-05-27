@@ -9,9 +9,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "message_elements.c"
+//#include "message_elements.c"
 #include "command_line_manager.h"
 #include "location_reader.c"
+#include "query_sender.c"
 
 void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers);
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count);
@@ -25,44 +26,17 @@ int main( int argc , char *argv[])
     setInputValues(argc,argv);
 
     extern int errno; 
-
-    // Lo que ingresa el usuario
-    unsigned char* hostname= getHostname();
-    unsigned short qtype = getQType();
-    const int portnum = getPort(); 
     
     int socket_file_descriptor;
     struct sockaddr_in server;
-    unsigned char query[65536], response[65536], *qname, *reader;
+    unsigned char response[65536], *reader;
 
     struct RES_RECORD answers[20],auth[20],addit[20];
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
     server.sin_addr.s_addr = getServer();
-    server.sin_port = htons((short) portnum); 
-
-    struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
-    query_header->id = (unsigned short) htons(getpid());
-    query_header->qr = 0; 
-    query_header->opcode = 0; 
-    query_header->aa = 0; 
-    query_header->tc = 0; 
-    query_header->rd = getRD();
-    query_header->ra = 0; 
-    query_header->z = 0;
-    query_header->rcode = 0;
-    query_header->qd_count = htons(1); 
-    query_header->an_count = 0;
-    query_header->ns_count = 0;
-    query_header->ar_count = 0;
-
-    qname = (unsigned char *) &query[sizeof(struct DNS_HEADER)];
-    changeToQNameFormat(qname, hostname);
-
-    struct QUESTION_CONSTANT *q_constant = (struct QUESTION_CONSTANT *) &query[sizeof(struct DNS_HEADER)+ (strlen((const char*)qname) + 1)];
-    q_constant->qtype = htons(qtype);
-    q_constant->qclass = htons(1); // Poner una constante para internet
+    server.sin_port = htons((short) getPort()); 
 
     // Creacion del socket - devuelve -1 si da error 
     if((socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0))<0)
@@ -71,13 +45,11 @@ int main( int argc , char *argv[])
         exit(errno); 
     }
 
-    if((sendto(socket_file_descriptor, query, sizeof(struct DNS_HEADER) +  (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT), 0, (struct sockaddr*)&server, sizeof(server)))<0)
-    {
-        perror("Error al intentar enviar un mensaje al servidor. \n");
-        exit(errno); 
-    }
-    printf("Datos enviados.\n");
-    
+    unsigned char qname[1000];
+    changeToQNameFormat(qname, getHostname());
+
+    sendQuery(server, socket_file_descriptor, getRD(), qname, getQType());
+
     int i = sizeof server; 
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
     {
@@ -227,23 +199,6 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
     return name;
 }
 
-// unsigned char* readPreference(unsigned char* reader)
-// {
-//     unsigned char* preference = (unsigned char*) malloc(sizeof(int));
-//     int i=0;
-
-//     while(*reader != '\0')
-//     {
-//         preference[i] = reader[i];
-//         printf("RDATA - PREFERENCE: %c \n", preference[i]);
-//         printf("i: %i \n", i);
-//         i++;
-//     }
-//     preference[i] = '\0';
-
-//     return preference;
-// }
-
 /*
  * Imprime en la consola la respuesta de la consulta realizada al DNS.
  * ans_count - Cantidad de repuestas que el DNS proporciono para una determinada 
@@ -269,12 +224,12 @@ void printAnswers(int ans_count, struct RES_RECORD *answers)
                 // Casteamos la respuesta a una direccion de internet del campo IN
                 aux.sin_addr.s_addr = (*ipv4); 
                 // Convertimos el numero correspondiente al campo IN a una respresentacion en ASCII. 
-                printf("posee la direccion IPv4 : %s\n",inet_ntoa(aux.sin_addr));
+                printf("posee la dirección IPv4: %s\n", inet_ntoa(aux.sin_addr));
             }; break;
 
             case T_CNAME:
             {
-                printf("posee alias : %s\n",answers[i].rdata);
+                printf("posee alias: %s\n", answers[i].rdata);
             }; break;
 
             case T_LOC:
