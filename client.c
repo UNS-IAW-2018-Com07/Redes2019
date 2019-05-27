@@ -79,22 +79,22 @@ int main( int argc , char *argv[])
     printf("Datos enviados.\n");
     
     int i = sizeof server; 
-    struct DNS_HEADER *query_response = (struct DNS_HEADER *) response;
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
     {
         perror("Error al intentar comenzar a atender conexiones. \n");
         exit(errno); 
     }
 
+    struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
     printf("\nLa respuesta contiene: ");
-    printf("\n %d Consultas.",ntohs(query_response->qd_count));
-    printf("\n %d Respuestas.",ntohs(query_response->an_count));
-    printf("\n %d Servidores autoritativos.",ntohs(query_response->ns_count));
-    printf("\n %d Adicionales.\n\n",ntohs(query_response->ar_count));
+    printf("\n %d Consultas.",ntohs(query_response_header->qd_count));
+    printf("\n %d Respuestas.",ntohs(query_response_header->an_count));
+    printf("\n %d Servidores autoritativos.",ntohs(query_response_header->ns_count));
+    printf("\n %d Adicionales.\n\n",ntohs(query_response_header->ar_count));
    
-    readAnswers(ntohs(query_response->an_count), reader, response, answers);
-    printAnswers(ntohs(query_response->an_count), answers); 
+    readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
+    printAnswers(ntohs(query_response_header->an_count), answers); 
 
     return 0;
 }
@@ -114,7 +114,7 @@ void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, 
  
     for(int i = 0; i < ans_count; i++)
     {
-        answers[i].name = readName(reader,response,&stop);
+        answers[i].name = readName(reader, response, &stop);
         reader = reader + stop;
  
         answers[i].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
@@ -126,7 +126,7 @@ void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, 
             case T_A:
             {
                 answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len));
-                for(int j=0; j<ntohs(answers[i].resource_constant->data_len); j++)
+                for(int j = 0; j < ntohs(answers[i].resource_constant->data_len); j++)
                 {
                     answers[i].rdata[j]=reader[j];
                 }
@@ -148,7 +148,7 @@ void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, 
             default: 
             {
                 //No se si sirve para alguno de estos dos 
-                answers[i].rdata = readName(reader,response,&stop);
+                answers[i].rdata = readName(reader, response, &stop);
                 reader = reader + stop;
             }    
         }
@@ -190,9 +190,9 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
     name[0]='\0';
  
     // Leemos el nombre de dominio con formato (longitud,dato), es decir: 3www6google3com
-    while(*reader!=0)
+    while(*reader != 0)
     {
-        if(*reader>=192)
+        if(*reader >= 192)
         {
             // El nombre de dominio se encuentra comprimido por lo que el reader tiene un puntero 
             // al valor real. Desde el comienzo del mensaje se lo debe desplazar a la primera ocurrencia
@@ -204,20 +204,20 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
         }
         else
         {
-            name[p++]=*reader;
+            name[p++] = *reader;
         }
  
-        reader = reader+1;
+        reader = reader + 1;
  
-        if(jumped==0)
+        if(jumped == 0)
         {
             // Si no hemos saltado a otra locacion de memoria entonces podemos incrementar el count 
             *count = *count + 1; 
         }
     }
  
-    name[p]='\0'; // agregamos el caracter terminador
-    if(jumped==1)
+    name[p] = '\0'; // agregamos el caracter terminador
+    if(jumped == 1)
     {
         // Numero de veces que en realidad nos movimos en el paquete.
         *count = *count + 1;
@@ -279,14 +279,13 @@ void printAnswers(int ans_count, struct RES_RECORD *answers)
 
             case T_LOC:
             {
-                printf(" tiene la siguiente información geográfica: %s", answers[i].rdata);
-                printf("tiene la siguiente información geográfica: %s", answers[i].rdata);
+                printf("tiene la siguiente información geográfica: %s\n", answers[i].rdata);
             }; break;
 
             case T_MX:
             {
                 printf("está a cargo del siguiente servidor de correo electrónico: %s", answers[i].rdata);
-                printf(" (prioridad = %i)", preferences[i]);
+                printf(" (prioridad = %i)\n", preferences[i]);
             }; break;
 
             default: 
