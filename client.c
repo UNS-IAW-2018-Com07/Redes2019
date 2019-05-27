@@ -5,10 +5,8 @@
 #include <netdb.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 //#include "message_elements.c"
 #include "command_line_manager.h"
 #include "location_reader.c"
@@ -45,10 +43,7 @@ int main( int argc , char *argv[])
         exit(errno); 
     }
 
-    unsigned char qname[1000];
-    changeToQNameFormat(qname, getHostname());
-
-    sendQuery(server, socket_file_descriptor, getRD(), qname, getQType());
+    unsigned char *qname = sendQuery(server, socket_file_descriptor, getRD(), getHostname(), getQType());
 
     int i = sizeof server; 
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)

@@ -1,24 +1,16 @@
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <strings.h>
-//#include <netdb.h>
-//#include <sys/errno.h>
-//#include <sys/socket.h>
-//#include <sys/types.h>
-//#include <netinet/in.h>
-#include <arpa/inet.h>
-//#include <unistd.h>
+#include <sys/types.h>
+#include <unistd.h>
+//#include "query_sender.h"
 #include "message_elements.c"
 
 unsigned char query[65536];
 extern int errno; 
 
-void sendQuery(
+unsigned char* sendQuery(
     struct sockaddr_in server,
     int socket_file_descriptor,
     unsigned char rd,
-    unsigned char *qname_formated,
+    unsigned char *hostname,
     unsigned short qtype)
 {
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
@@ -37,7 +29,7 @@ void sendQuery(
     query_header->ar_count = 0;
 
     unsigned char *qname = (unsigned char *) &query[sizeof(struct DNS_HEADER)];
-    qname = qname_formated;
+    changeToQNameFormat(qname, hostname);
 
     struct QUESTION_CONSTANT *q_constant = (struct QUESTION_CONSTANT *) &query[sizeof(struct DNS_HEADER)+ (strlen((const char*)qname) + 1)];
     q_constant->qtype = htons(qtype);
@@ -49,4 +41,6 @@ void sendQuery(
         exit(errno); 
     }
     printf("Datos enviados.\n");
+
+    return qname;
 }
