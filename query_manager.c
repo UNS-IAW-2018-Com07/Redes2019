@@ -7,12 +7,7 @@
 
 unsigned char query[65536], response[65536];
 
-unsigned char* sendQuery(
-    struct sockaddr_in server,
-    int socket_file_descriptor,
-    unsigned char rd,
-    char *hostname,
-    unsigned short qtype)
+int sendQuery(struct sockaddr_in server, int socket_file_descriptor, char *hostname, unsigned short qtype)
 {
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
     query_header->id = (unsigned short) htons(getpid());
@@ -20,7 +15,7 @@ unsigned char* sendQuery(
     query_header->opcode = 0; 
     query_header->aa = 0; 
     query_header->tc = 0; 
-    query_header->rd = rd;
+    query_header->rd = 1;
     query_header->ra = 0; 
     query_header->z = 0;
     query_header->rcode = 0;
@@ -42,7 +37,7 @@ unsigned char* sendQuery(
         exit(errno); 
     }  
 
-    return qname;
+    return strlen(qname) + 1;
 }
 
 unsigned char* receiveQuery(struct sockaddr_in server, int socket_file_descriptor)

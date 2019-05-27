@@ -19,7 +19,6 @@ int main( int argc , char *argv[])
     
     int socket_file_descriptor;
     struct sockaddr_in server;
-    unsigned char *reader;
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
@@ -33,14 +32,21 @@ int main( int argc , char *argv[])
         exit(errno); 
     }
 
-    unsigned char *qname = sendQuery(server, socket_file_descriptor, getRD(), getHostname(), getQType());
+    if(getRD()) // Bit de recursión activado
+    {
+        int qname_length = sendQuery(server, socket_file_descriptor, getHostname(), getQType());
+        unsigned char *response = receiveQuery(server, socket_file_descriptor);
+        //aca va el handler de la respuesta
+    }
+    else // Hay que imprimir el trace
+    {
+        /* code */
+    }
+    
 
-    unsigned char *response = receiveQuery(server, socket_file_descriptor);
     
-    struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
-    reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
+
     
-    handleResponse(query_response_header, reader, response);
 
     return 0;
 }
