@@ -66,6 +66,12 @@ struct RES_RECORD
  * Cada seccion se representa como un par (longitud, dato). 
  * La longitud es un entero de un byte que representa la cantidad de caracteres de un dato. 
  * Convierte por ejemplo: www.uns.edu.ar a 3www3uns3edu2ar 
+ * 
+ * *qname    - Almacena la respuesta. Posee los pares (longitud, dato) del nombre por 
+ *             el cual se consulta. 
+ *             Siguiendo el ejemplo anterior, tomaria el valor 3www3uns3edu2ar
+ * *hostname - Nombre por el cual se desea obtener el formato correspondiente al QName.
+ *             Siguiendo el ejemplo anterior, seria www.uns.edu.ar
  */
 void changeToQNameFormat(unsigned char* qname, unsigned char* hostname) 
 {
@@ -99,6 +105,11 @@ void changeToQNameFormat(unsigned char* qname, unsigned char* hostname)
 /*
  * Inversa al metodo anterior. 
  * Convierte por ejemplo: 3www3uns3edu2ar a www.uns.edu.ar 
+ * *qname - Posee los pares (longitud, dato) del nombre por el cual se consulta. 
+ *          El metodo sobreescribe el valor de qname para que se lo transforme a 
+ *          una cadena de caracteres tal que a cada seccion se la separa por un punto.
+ *          Es decir, en un principio tendra 3www3uns3edu2ar y, al finalizar el metodo
+ *          su valor almacenara www.uns.edu.ar
  */
 void changeFromQNameFormatToNormalFormat(unsigned char* qname) 
 {

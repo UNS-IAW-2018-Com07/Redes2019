@@ -13,11 +13,10 @@
 #include "command_line_manager.h"
 #include "location_reader.c"
 
-in_addr_t getQueryServer();
-void readAnswers();
-unsigned char* readName();
-void printAnswers();
-unsigned char* readPreference();
+void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers);
+unsigned char* readName(unsigned char *reader, unsigned char *response, int *count);
+void printAnswers(int ans_count, struct RES_RECORD *answers);
+unsigned char* readPreference(unsigned char* reader);
 
 int preferences[20];
 
@@ -33,7 +32,6 @@ int main( int argc , char *argv[])
     const int portnum = getPort(); 
     
     int socket_file_descriptor;
-    struct sockaddr_in aux;
     struct sockaddr_in server;
     unsigned char query[65536], response[65536], *qname, *reader;
 
@@ -72,119 +70,51 @@ int main( int argc , char *argv[])
         perror("Error al intentar abrir el socket. \n");
         exit(errno); 
     }
-    
-    /*
-    printf("Id:: %d \n",ntohs(query_header->id));
-    printf("Puntero Id:: %p \n",&query_header->id);
-    
-    printf("Rd:: %d \n",query_header->rd);
-    printf("TC:: %d \n",ntohs(query_header->tc));
-    printf("AA:: %d \n",ntohs(query_header->aa));
-    printf("opcode:: %d \n",ntohs(query_header->opcode));
-    printf("QR:: %d \n",ntohs(query_header->qr));
-
-    printf("Rcode:: %d \n",ntohs(query_header->rcode));
-    printf("Z:: %d \n",ntohs(query_header->z));
-    printf("RA:: %d \n",ntohs(query_header->ra));
-
-    printf("QdCount:: %d \n",ntohs(query_header->qd_count));
-    printf("AnswerCount:: %d \n",ntohs(query_header->an_count));
-    printf("NsCount:: %d \n",ntohs(query_header->ns_count));
-    printf("ArCount:: %d \n",ntohs(query_header->ar_count));
-    */
 
     if((sendto(socket_file_descriptor, query, sizeof(struct DNS_HEADER) +  (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT), 0, (struct sockaddr*)&server, sizeof(server)))<0)
     {
         perror("Error al intentar enviar un mensaje al servidor. \n");
         exit(errno); 
     }
-    printf("Data Sent \n");
+    printf("Datos enviados.\n");
     
     int i = sizeof server; 
+    struct DNS_HEADER *query_response = (struct DNS_HEADER *) response;
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
     {
         perror("Error al intentar comenzar a atender conexiones. \n");
         exit(errno); 
     }
 
-    struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
-    printf("\nThe response contains : ");
-    printf("\n %d Questions.",ntohs(query_response_header->qd_count));
-    printf("\n %d Answers.",ntohs(query_response_header->an_count));
-    printf("\n %d Authoritative Servers.",ntohs(query_response_header->ns_count));
-    printf("\n %d Additional records.\n\n",ntohs(query_response_header->ar_count));
-
-/*
-    printf("[+]Data Received: %li \n", strlen(response));
-
-    printf("Id:: %d \n",ntohs(query_response->id));
-
-    printf("Rd:: %d \n",ntohs(query_response->rd));
-    printf("TC:: %d \n",ntohs(query_response->tc));
-    printf("AA:: %d \n",ntohs(query_response->aa));
-    printf("opcode:: %d \n",ntohs(query_response->opcode));
-    printf("QR - Ntohs:: %d \n",ntohs(query_response->qr));
-    printf("QR - Htons:: %d \n",htons(query_response->qr));
-    printf("QR - Sin Nada:: %d \n",query_response->qr);
-
-    printf("Rcode - Htons:: %d \n",ntohs(query_response->rcode));
-    printf("Rcode - Htons:: %d \n",htons(query_response->rcode));
-    printf("Rcode - Sin nada:: %d \n",query_response->rcode);
-    printf("Z:: %d \n",ntohs(query_response->z));
-    printf("RA:: %d \n",ntohs(query_response->ra));
-
-    printf("QdCount:: %d \n",ntohs(query_response->qd_count));
-    printf("AnswerCount:: %d \n",ntohs(query_response->an_count));
-    printf("NsCount:: %d \n",ntohs(query_response->ns_count));
-    printf("ArCount:: %d \n",ntohs(query_response->ar_count));
-    */
-
-    readAnswers(reader, response, query_response_header, answers);
-
-    //print answers
-    printf("\nAnswer Records : %d \n" , ntohs(query_response_header->an_count) );
-    for(i = 0; i < ntohs(query_response_header->an_count); i++)
-    {
-        printf("Name : %s ", answers[i].name);
- 
-        if(ntohs(answers[i].resource_constant->type) == T_A) //IPv4 address
-        {
-            long *p;
-            p = (long*)answers[i].rdata;
-            aux.sin_addr.s_addr=(*p); //working without ntohl
-            printf("has IPv4 address : %s", inet_ntoa(aux.sin_addr));
-        }
-         
-        if(ntohs(answers[i].resource_constant->type) == T_CNAME) 
-        {
-            printf("has alias name : %s", answers[i].rdata);
-        }
-
-        if(ntohs(answers[i].resource_constant->type) == T_LOC) 
-        {
-            printf("tiene la siguiente información geográfica: %s", answers[i].rdata);
-        }
-
-        if(ntohs(answers[i].resource_constant->type) == T_MX) 
-        {
-            printf("está a cargo del siguiente servidor de correo electrónico: %s", answers[i].rdata);
-            printf(" (prioridad = %i)", preferences[i]);
-        }
- 
-        printf("\n");
-    }
+    printf("\nLa respuesta contiene: ");
+    printf("\n %d Consultas.",ntohs(query_response->qd_count));
+    printf("\n %d Respuestas.",ntohs(query_response->an_count));
+    printf("\n %d Servidores autoritativos.",ntohs(query_response->ns_count));
+    printf("\n %d Adicionales.\n\n",ntohs(query_response->ar_count));
+   
+    readAnswers(ntohs(query_response->an_count), reader, response, answers);
+    printAnswers(ntohs(query_response->an_count), answers); 
 
     return 0;
 }
 
-void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEADER *query_response_header, struct RES_RECORD *answers)
+/*
+ * Lee las respuestas proporcionadas por el DNS de acuerdo a su tipo: A, MX, LOC, CNAME, entre otros. 
+ * ans_count - Cantidad de repuestas que el DNS proporciono para una determinada 
+ *             consulta (en el formato del host).
+ * *reader   - Puntero a la seccion ANSWER de la consulta realizada al DNS. 
+ * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
+ * *answers  - Puntero al registro que almacenara las respuestas del DNS.
+ */
+
+void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers)
 { 
     int stop = 0;
  
-    for(int i=0;i<ntohs(query_response_header->an_count);i++)
+    for(int i = 0; i < ans_count; i++)
     {
-        answers[i].name = readName(reader, response, &stop);
+        answers[i].name = readName(reader,response,&stop);
         reader = reader + stop;
  
         answers[i].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
@@ -196,7 +126,7 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
             case T_A:
             {
                 answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len));
-                for(int j = 0; j < ntohs(answers[i].resource_constant->data_len); j++)
+                for(int j=0; j<ntohs(answers[i].resource_constant->data_len); j++)
                 {
                     answers[i].rdata[j]=reader[j];
                 }
@@ -218,52 +148,79 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
             default: 
             {
                 //No se si sirve para alguno de estos dos 
-                answers[i].rdata = readName(reader, response, &stop);
+                answers[i].rdata = readName(reader,response,&stop);
                 reader = reader + stop;
             }    
         }
     }
 }
 
-unsigned char* readName(unsigned char* reader, unsigned char* buffer, int* count)
+/*
+* El DNS utiliza un esquema de compresion en donde elimina la repeticion de nombre de domino en los campos 
+* NAME, QNAME y RDATA. El nombre de dominio es reemplazado por un puntero a una ocurrencia anterior de dicho 
+* nombre. 
+* El puntero (2 bytes) posee los dos primeros bits encendidos (por lo que tiene que el primero octeto debe
+* ser >=192). Esto permite que el puntero sea diferenciado de un label, dado que este ultimo debe comenzar 
+* con dos ceros (rango 0 a 63).El campo del offset especifica un desplazamiento desde el comienzo del mensaje. 
+*
+*           +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+*           | 1  1|                OFFSET                   |
+*           +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+*/
+
+/*
+ * Obtiene un nombre de dominio a partir de la respuesta. 
+ * *reader   - Puntero a la posicion del comienzo de un nombre de dominio que se encuentra 
+ *             en la seccion ANSWER de la consulta realizada al DNS. 
+ * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
+ * *count    - Puntero que retorna las posiciones que el reader se movio. Depende si el nombre de dominio 
+ *             era un puntero (se mueve dos) o un string (se mueve la cantidad de caracteres de dicho string) 
+ */
+
+unsigned char* readName(unsigned char *reader, unsigned char *response, int *count)
 {
-    unsigned char *name;
+    unsigned char *name = (unsigned char*) malloc(256);
     unsigned int p = 0, jumped = 0, offset;
     int i, j;
  
     *count = 1;
-    name = (unsigned char*) malloc(256);
  
-    // mascara para obtener los dos bits mas significativos
-    int bitMask = 49152; // 1100 0000 0000 0000
+    // Valor para obtener el offset de un puntero (si es que hay).
+    int bitMask = 49152; // 11000000 00000000
     name[0]='\0';
  
-    //read the names in 3www6google3com format
-    while(*reader != 0)
+    // Leemos el nombre de dominio con formato (longitud,dato), es decir: 3www6google3com
+    while(*reader!=0)
     {
-        if(*reader >= 192)
+        if(*reader>=192)
         {
+            // El nombre de dominio se encuentra comprimido por lo que el reader tiene un puntero 
+            // al valor real. Desde el comienzo del mensaje se lo debe desplazar a la primera ocurrencia
+            // del nombre, es decir, response + offset. (luego del if se suma 1)
             offset = (*reader)*256 + *(reader+1) - bitMask; 
-            reader = buffer + offset - 1;
-            jumped = 1; //we have jumped to another location so counting wont go up!
+            reader = response + offset - 1;
+            // Saltamos a otra locacion de memoria por lo que count no se incrementara
+            jumped = 1; 
         }
         else
         {
-            name[p++] = *reader;
+            name[p++]=*reader;
         }
  
-        reader = reader + 1;
+        reader = reader+1;
  
-        if(jumped == 0)
+        if(jumped==0)
         {
-            *count = *count + 1; //if we havent jumped to another location then we can count up
+            // Si no hemos saltado a otra locacion de memoria entonces podemos incrementar el count 
+            *count = *count + 1; 
         }
     }
  
-    name[p] = '\0'; //caracter terminador
-    if(jumped == 1)
+    name[p]='\0'; // agregamos el caracter terminador
+    if(jumped==1)
     {
-        *count = *count + 1; //number of steps we actually moved forward in the packet
+        // Numero de veces que en realidad nos movimos en el paquete.
+        *count = *count + 1;
     }
  
     changeFromQNameFormatToNormalFormat(name);
@@ -286,3 +243,56 @@ unsigned char* readName(unsigned char* reader, unsigned char* buffer, int* count
 
 //     return preference;
 // }
+
+/*
+ * Imprime en la consola la respuesta de la consulta realizada al DNS.
+ * ans_count - Cantidad de repuestas que el DNS proporciono para una determinada 
+ *            consulta (en el formato del host).
+ * *answers - Puntero al registro que almacena la respuesta del DNS. 
+ */
+
+void printAnswers(int ans_count, struct RES_RECORD *answers)
+{
+    struct sockaddr_in aux;
+    long *ipv4;
+
+    printf("\nCantidad de respuestas: %d \n" , ans_count);
+    for(int i = 0; i < ans_count; i++)
+    {
+        printf("Nombre de dominio : %s ",answers[i].name);
+
+        switch(ntohs(answers[i].resource_constant->type))
+        {
+            case T_A: 
+            {
+                ipv4 = (long*)answers[i].rdata;
+                // Casteamos la respuesta a una direccion de internet del campo IN
+                aux.sin_addr.s_addr = (*ipv4); 
+                // Convertimos el numero correspondiente al campo IN a una respresentacion en ASCII. 
+                printf("posee la direccion IPv4 : %s\n",inet_ntoa(aux.sin_addr));
+            }; break;
+
+            case T_CNAME:
+            {
+                printf("posee alias : %s\n",answers[i].rdata);
+            }; break;
+
+            case T_LOC:
+            {
+                printf(" tiene la siguiente información geográfica: %s", answers[i].rdata);
+                printf("tiene la siguiente información geográfica: %s", answers[i].rdata);
+            }; break;
+
+            case T_MX:
+            {
+                printf("está a cargo del siguiente servidor de correo electrónico: %s", answers[i].rdata);
+                printf(" (prioridad = %i)", preferences[i]);
+            }; break;
+
+            default: 
+            {
+                printf("ELIMINAR - La consulta es de tipo : %i\n",ntohs(answers[i].resource_constant->type));
+            } break;
+        }
+    }
+}
