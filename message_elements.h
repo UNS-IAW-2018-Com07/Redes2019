@@ -37,7 +37,7 @@ struct QUESTION_CONSTANT
 };
 
 #pragma pack(push, 1) 
-// Apila en la pila interna el valor anterior para linear los campos de las estructuras.
+// Apila en la pila interna el valor anterior para alinear los campos de las estructuras.
 // A continuación ajusta el nuevo valor para alinear los campos.
 struct RES_RECORD_CONSTANT
 {
