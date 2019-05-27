@@ -6,7 +6,7 @@
 #include <argp.h>
 #include "command_line_manager.h"
 
-unsigned char* hostname;
+char* hostname;
 in_addr_t server;
 int port = 53; 
 unsigned short qtype = 1;
@@ -198,7 +198,7 @@ void setInputValues(int argc, char* argv[])
     }
 }
 
-unsigned char* getHostname()
+char* getHostname()
 {
     return hostname; 
 }

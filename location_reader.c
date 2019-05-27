@@ -14,19 +14,15 @@
 #include <errno.h>
 #include <math.h>
 #include <netdb.h>
-#include <resolv.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-const char *precsize_ntoa();
+#include "location_reader.h"
 
 /* takes an on-the-wire LOC RR and formats it in a human readable format. */
-const char *
-loc_ntoa(binary, ascii)
-	const unsigned char *binary;
-	char *ascii;
+const char *loc_ntoa(const unsigned char *binary, char *ascii)
 {
 	static char *error = "?";
 	static char tmpbuf[sizeof
@@ -134,9 +130,7 @@ static unsigned int poweroften[10] = {1, 10, 100, 1000, 10000, 100000,
 				      1000000,10000000,100000000,1000000000};
 
 /* takes an XeY precision/size value, returns a string representation. */
-const char *
-precsize_ntoa(prec)
-	u_int8_t prec;
+const char *precsize_ntoa(u_int8_t prec)
 {
 	static char retbuf[sizeof "90000000.00"];	/* XXX nonreentrant */
 	unsigned long val;

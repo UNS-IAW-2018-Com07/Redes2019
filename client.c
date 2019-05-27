@@ -4,17 +4,18 @@
 #include <strings.h>
 #include <netdb.h>
 #include <sys/errno.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-//#include "message_elements.c"
+#include "message_elements.h"
 #include "command_line_manager.h"
-#include "location_reader.c"
-#include "query_sender.c"
+#include "location_reader.h"
+#include "query_sender.h"
 
 void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers);
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count);
-void printAnswers(int ans_count, struct RES_RECORD *answers);
+void printAnswers(int ans_count, struct RES_RECORD *answers); 
 unsigned char* readPreference(unsigned char* reader);
 
 int preferences[20];
@@ -22,14 +23,12 @@ int preferences[20];
 int main( int argc , char *argv[])
 {
     setInputValues(argc,argv);
-
-    extern int errno; 
     
     int socket_file_descriptor;
     struct sockaddr_in server;
     unsigned char response[65536], *reader;
 
-    struct RES_RECORD answers[20],auth[20],addit[20];
+    struct RES_RECORD answers[20];
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET; 
@@ -54,11 +53,11 @@ int main( int argc , char *argv[])
 
     struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION_CONSTANT)];
-    printf("\nLa respuesta contiene: ");
-    printf("\n %d Consultas.",ntohs(query_response_header->qd_count));
-    printf("\n %d Respuestas.",ntohs(query_response_header->an_count));
-    printf("\n %d Servidores autoritativos.",ntohs(query_response_header->ns_count));
-    printf("\n %d Adicionales.\n\n",ntohs(query_response_header->ar_count));
+    printf("\n\tLa respuesta contiene: ");
+    printf("\n\t %d Consultas.",ntohs(query_response_header->qd_count));
+    printf("\n\t %d Respuestas.",ntohs(query_response_header->an_count));
+    printf("\n\t %d Servidores autoritativos.",ntohs(query_response_header->ns_count));
+    printf("\n\t %d Adicionales.\n",ntohs(query_response_header->ar_count));
    
     readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
     printAnswers(ntohs(query_response_header->an_count), answers); 
@@ -148,8 +147,6 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
 {
     unsigned char *name = (unsigned char*) malloc(256);
     unsigned int p = 0, jumped = 0, offset;
-    int i, j;
- 
     *count = 1;
  
     // Valor para obtener el offset de un puntero (si es que hay).
@@ -206,10 +203,10 @@ void printAnswers(int ans_count, struct RES_RECORD *answers)
     struct sockaddr_in aux;
     long *ipv4;
 
-    printf("\nCantidad de respuestas: %d \n" , ans_count);
+    printf("\n\tCantidad de respuestas: %d \n" , ans_count);
     for(int i = 0; i < ans_count; i++)
     {
-        printf("Nombre de dominio : %s ",answers[i].name);
+        printf("\tNombre de dominio : %s ",answers[i].name);
 
         switch(ntohs(answers[i].resource_constant->type))
         {
@@ -244,4 +241,5 @@ void printAnswers(int ans_count, struct RES_RECORD *answers)
             } break;
         }
     }
+    printf("\n");
 }

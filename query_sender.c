@@ -1,16 +1,17 @@
 #include <sys/types.h>
 #include <unistd.h>
-//#include "query_sender.h"
-#include "message_elements.c"
+#include <arpa/inet.h>
+#include <errno.h>
+#include "query_sender.h"
+#include "message_elements.h"
 
 unsigned char query[65536];
-extern int errno; 
 
 unsigned char* sendQuery(
     struct sockaddr_in server,
     int socket_file_descriptor,
     unsigned char rd,
-    unsigned char *hostname,
+    char *hostname,
     unsigned short qtype)
 {
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
@@ -40,7 +41,7 @@ unsigned char* sendQuery(
         perror("Error al intentar enviar un mensaje al servidor. \n");
         exit(errno); 
     }
-    printf("Datos enviados.\n");
+    printf("\n\tDatos enviados.\n");    
 
     return qname;
 }
