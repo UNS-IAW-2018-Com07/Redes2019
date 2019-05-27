@@ -17,6 +17,9 @@ in_addr_t getQueryServer();
 void readAnswers();
 unsigned char* readName();
 void printAnswers();
+unsigned char* readPreference();
+
+int preferences[20];
 
 int main( int argc , char *argv[])
 {
@@ -160,7 +163,13 @@ int main( int argc , char *argv[])
 
         if(ntohs(answers[i].resource_constant->type) == T_LOC) 
         {
-            printf(" tiene la siguiente información geográfica: %s", answers[i].rdata);
+            printf("tiene la siguiente información geográfica: %s", answers[i].rdata);
+        }
+
+        if(ntohs(answers[i].resource_constant->type) == T_MX) 
+        {
+            printf("está a cargo del siguiente servidor de correo electrónico: %s", answers[i].rdata);
+            printf(" (prioridad = %i)", preferences[i]);
         }
  
         printf("\n");
@@ -184,7 +193,7 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
         int answer_type = ntohs(answers[i].resource_constant->type);
         switch(answer_type)
         {
-            case 1: // A
+            case T_A:
             {
                 answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len));
                 for(int j = 0; j < ntohs(answers[i].resource_constant->data_len); j++)
@@ -194,14 +203,17 @@ void readAnswers(unsigned char *reader, unsigned char *response, struct DNS_HEAD
                 answers[i].rdata[ntohs(answers[i].resource_constant->data_len)] = '\0';
                 reader = reader + ntohs(answers[i].resource_constant->data_len);
             }; break;
-            /*
-            case 15: // MX
+            case T_MX:
             {
-
+                preferences[i] = (int)reader[1];
+                reader = reader + 2;
+                answers[i].rdata = readName(reader, response, &stop);
+                reader = reader + stop;
             }; break;
-            */case 29: // LOC
+            case T_LOC:
             {
                 answers[i].rdata = (unsigned char*)loc_ntoa(reader, NULL);
+                reader = reader + ntohs(answers[i].resource_constant->data_len);
             }; break;
             default: 
             {
@@ -257,3 +269,20 @@ unsigned char* readName(unsigned char* reader, unsigned char* buffer, int* count
     changeFromQNameFormatToNormalFormat(name);
     return name;
 }
+
+// unsigned char* readPreference(unsigned char* reader)
+// {
+//     unsigned char* preference = (unsigned char*) malloc(sizeof(int));
+//     int i=0;
+
+//     while(*reader != '\0')
+//     {
+//         preference[i] = reader[i];
+//         printf("RDATA - PREFERENCE: %c \n", preference[i]);
+//         printf("i: %i \n", i);
+//         i++;
+//     }
+//     preference[i] = '\0';
+
+//     return preference;
+// }
