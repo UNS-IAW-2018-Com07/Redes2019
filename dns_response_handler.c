@@ -1,37 +1,26 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <netdb.h>
-#include <sys/errno.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
 #include "dns_response_handler.h"
 #include "location_reader.h"
 
-void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers);
+int* readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers);
+void readAuthorities(int ns_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *auth);
+void readAdditional(int ar_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *addit);
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count); 
-void printAnswers(int ans_count, struct RES_RECORD *answers);
-void printAuthority(int ns_count, struct RES_RECORD *auth);
-void printAdditional(int ar_count, struct RES_RECORD *addit);
 
-int preferences[20];
+int stop = 0;
 
-void handleResponse(struct DNS_HEADER *query_response_header, unsigned char *reader, unsigned char *response)
+void handleResponse(unsigned char *response, int qname_length)
 {
-    struct RES_RECORD answers[20];
+    struct RES_RECORD answers[20], auth[20], addit[20];
+    int* preferences;
 
-    printf("\n\tLa respuesta contiene: ");
-    printf("\n\t %d Consultas.",ntohs(query_response_header->qd_count));
-    printf("\n\t %d Respuestas.",ntohs(query_response_header->an_count));
-    printf("\n\t %d Servidores autoritativos.",ntohs(query_response_header->ns_count));
-    printf("\n\t %d Adicionales.\n",ntohs(query_response_header->ar_count));
+    struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
+    unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
    
-    readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
-    printAnswers(ntohs(query_response_header->an_count), answers);
+    preferences = readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
+    readAuthorities(ntohs(query_response_header->an_count), reader, response, auth);
+    readAdditional(ntohs(query_response_header->an_count), reader, response, addit);
+
+    printResponse(query_response_header, preferences, answers, auth, addit);
 }
 
 /*
@@ -42,10 +31,9 @@ void handleResponse(struct DNS_HEADER *query_response_header, unsigned char *rea
  * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
  * *answers  - Puntero al registro que almacenara las respuestas del DNS.
  */
-
-void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers)
-{ 
-    int stop = 0;
+int* readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers)
+{  
+    int* preferences = malloc(sizeof(int)*20);;
  
     for(int i = 0; i < ans_count; i++)
     {
@@ -88,6 +76,29 @@ void readAnswers(int ans_count, unsigned char *reader, unsigned char *response, 
             }    
         }
     }
+
+    return preferences; 
+}
+
+void readAuthorities(int ns_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *auth)
+{
+    for(int i = 0; i < ns_count; i++)
+    {
+        auth[i].name = readName(reader,response,&stop);
+        reader += stop;
+ /*
+        auth[i].resource=(struct R_DATA*)(reader);
+        reader+=sizeof(struct R_DATA);
+ 
+        auth[i].rdata=ReadName(reader,buf,&stop);
+        reader+=stop;
+        */
+    }
+}
+
+void readAdditional(int ar_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *addit)
+{
+
 }
 
 /*
@@ -158,78 +169,4 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
  
     changeFromQNameFormatToNormalFormat(name);
     return name;
-}
-
-void printResponse(
-    struct DNS_HEADER *query_response_header, 
-    struct RES_RECORD *answers,
-    struct RES_RECORD *authority, 
-    struct RES_RECORD *additional)
-{
-    printAnswers(query_response_header->an_count, answers);
-    printAuthority(query_response_header->ns_count, authority);
-    printAdditional(query_response_header->ar_count, additional); 
-}
-
-/*
- * Imprime en la consola la respuesta de la consulta realizada al DNS.
- * ans_count - Cantidad de repuestas que el DNS proporciono para una determinada 
- *            consulta (en el formato del host).
- * *answers - Puntero al registro que almacena la respuesta del DNS. 
- */
-
-void printAnswers(int ans_count, struct RES_RECORD *answers)
-{
-    struct sockaddr_in aux;
-    long *ipv4;
-
-    printf("\n\tCantidad de respuestas: %d \n" , ans_count);
-    for(int i = 0; i < ans_count; i++)
-    {
-        printf("\tNombre de dominio : %s ",answers[i].name);
-
-        switch(ntohs(answers[i].resource_constant->type))
-        {
-            case T_A: 
-            {
-                ipv4 = (long*)answers[i].rdata;
-                // Casteamos la respuesta a una direccion de internet del campo IN
-                aux.sin_addr.s_addr = (*ipv4); 
-                // Convertimos el numero correspondiente al campo IN a una respresentacion en ASCII. 
-                printf("posee la dirección IPv4: %s\n", inet_ntoa(aux.sin_addr));
-            }; break;
-
-            case T_CNAME:
-            {
-                printf("posee alias: %s\n", answers[i].rdata);
-            }; break;
-
-            case T_LOC:
-            {
-                printf("tiene la siguiente información geográfica: %s\n", answers[i].rdata);
-            }; break;
-
-            case T_MX:
-            {
-                printf("está a cargo del siguiente servidor de correo electrónico: %s", answers[i].rdata);
-                printf(" (prioridad = %i)\n", preferences[i]);
-            }; break;
-
-            default: 
-            {
-                printf("ELIMINAR - La consulta es de tipo : %i\n",ntohs(answers[i].resource_constant->type));
-            } break;
-        }
-    }
-    printf("\n");
-}
-
-void printAuthority(int ns_count, struct RES_RECORD *auth)
-{
-
-}
-
-void printAdditional(int ar_count, struct RES_RECORD *addit)
-{
-
 }

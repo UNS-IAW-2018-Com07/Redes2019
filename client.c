@@ -36,18 +36,12 @@ int main( int argc , char *argv[])
     {
         int qname_length = sendQuery(server, socket_file_descriptor, getHostname(), getQType());
         unsigned char *response = receiveQuery(server, socket_file_descriptor);
-        //aca va el handler de la respuesta
+        handleResponse(response, qname_length);
     }
     else // Hay que imprimir el trace
     {
         /* code */
     }
-    
-
-    
-
-    
-
     return 0;
 }
 

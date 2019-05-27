@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "dns_response_handler.h": "c",
-        "command_line_manager.h": "c",
-        "location_reader.h": "c",
-        "query_sender.h": "c"
-    }
-}
