@@ -6,7 +6,7 @@ void readAuthorities(int ns_count, unsigned char *reader, unsigned char *respons
 void readAdditional(int ar_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *addit);
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count); 
 
-int stop = 0;
+int stop;
 
 void handleResponse(unsigned char *response, int qname_length)
 {
@@ -17,8 +17,8 @@ void handleResponse(unsigned char *response, int qname_length)
     unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
    
     preferences = readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
-    readAuthorities(ntohs(query_response_header->an_count), reader, response, auth);
-    readAdditional(ntohs(query_response_header->an_count), reader, response, addit);
+    readAuthorities(ntohs(query_response_header->ns_count), reader, response, auth);
+    readAdditional(ntohs(query_response_header->ar_count), reader, response, addit);
 
     printResponse(query_response_header, preferences, answers, auth, addit);
 }
@@ -33,6 +33,7 @@ void handleResponse(unsigned char *response, int qname_length)
  */
 int* readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers)
 {  
+    stop = 0;
     int* preferences = malloc(sizeof(int)*20);;
  
     for(int i = 0; i < ans_count; i++)
@@ -84,21 +85,41 @@ void readAuthorities(int ns_count, unsigned char *reader, unsigned char *respons
 {
     for(int i = 0; i < ns_count; i++)
     {
-        auth[i].name = readName(reader,response,&stop);
+        auth[i].name = readName(reader, response, &stop);
         reader += stop;
- /*
-        auth[i].resource=(struct R_DATA*)(reader);
-        reader+=sizeof(struct R_DATA);
+        auth[i].resource_constant = (struct RES_RECORD_CONSTANT*) reader;
+        reader += sizeof(struct RES_RECORD_CONSTANT);
  
-        auth[i].rdata=ReadName(reader,buf,&stop);
-        reader+=stop;
-        */
+        auth[i].rdata = readName(reader, response, &stop);
+        reader += stop;
     }
 }
 
 void readAdditional(int ar_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *addit)
 {
-
+    for(int i = 0; i < ar_count; i++)
+    {
+        addit[i].name = readName(reader,response,&stop);
+        reader += stop;
+ 
+        addit[i].resource_constant = (struct RES_RECORD_CONSTANT*) reader;
+        reader += sizeof(struct RES_RECORD_CONSTANT);
+ 
+        if(ntohs(addit[i].resource_constant->type) == T_A)
+        {
+            addit[i].rdata = (unsigned char*) malloc(ntohs(addit[i].resource_constant->data_len));
+            for(int j = 0; j < ntohs(addit[i].resource_constant->data_len); j++)
+            addit[i].rdata[j] = reader[j];
+ 
+            addit[i].rdata[ntohs(addit[i].resource_constant->data_len)] = '\0';
+            reader += ntohs(addit[i].resource_constant->data_len);
+        }
+        else
+        {
+            addit[i].rdata = readName(reader, response, &stop);
+            reader += stop;
+        }
+    }
 }
 
 /*

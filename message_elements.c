@@ -33,7 +33,15 @@ void changeFromQNameFormatToNormalFormat(unsigned char* qname)
 {
     int qname_length =  (int) strlen((const char*) qname);
     int position_length = 0, i;
-     
+
+    if(qname_length == 0)
+    {
+        // consultaron por el root.     
+        qname[0]='.';
+        qname[1] = '\0';
+        return; 
+    }
+
     for(i = 0; i < qname_length; i++) 
     {
         position_length = qname[i];
@@ -44,5 +52,5 @@ void changeFromQNameFormatToNormalFormat(unsigned char* qname)
         }
         qname[i]='.';
     }
-    qname[i-1]='\0'; // removemos el ultimo punto innecesario
+    qname[i-1] = '\0'; // removemos el ultimo punto innecesario
 }

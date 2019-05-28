@@ -30,8 +30,8 @@ void printResponse(
     printf("\n\t %d Adicionales.\n",ntohs(query_response_header->ar_count));
 
     printAnswers(ntohs(query_response_header->an_count), preferences, answers);
-    printAuthorities(ntohs(query_response_header->an_count), auth);
-    printAdditional(ntohs(query_response_header->an_count), addit);
+    printAuthorities(ntohs(query_response_header->ns_count), auth);
+    printAdditional(ntohs(query_response_header->ar_count), addit);
 }
 
 
@@ -85,15 +85,38 @@ void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
             } break;
         }
     }
-    printf("\n");
 }
 
 void printAuthorities(int ns_count, struct RES_RECORD *auth)
 {
+    printf("\n\tAuthoritive Records : %d \n" , ns_count);
+    for(int i = 0; i < ns_count; i++)
+    {
+         
+        printf("\tName : %s ",auth[i].name);
 
+        if( ntohs(auth[i].resource_constant->type) == T_NS ||
+            ntohs(auth[i].resource_constant->type) == T_SOA )
+        {
+            printf("has nameserver : %s\n", auth[i].rdata);
+        }
+    }
 }
 
 void printAdditional(int ar_count, struct RES_RECORD *addit)
 {
+    struct sockaddr_in aux;
+    long *ipv4;
 
+    printf("\n\tAdditional Records : %d \n" , ar_count);
+    for(int i = 0; i < ar_count; i++)
+    {
+        printf("\tName : %s ",addit[i].name);
+        if(ntohs(addit[i].resource_constant->type) == T_A)
+        {
+            ipv4 = (long*) addit[i].rdata;
+            aux.sin_addr.s_addr = (*ipv4);
+            printf("has IPv4 address : %s\n",inet_ntoa(aux.sin_addr));
+        }
+    }
 }
