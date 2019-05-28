@@ -9,6 +9,8 @@ unsigned char query[65536], response[65536];
 
 int sendQuery(struct sockaddr_in server, int socket_file_descriptor, char *hostname, unsigned short qtype)
 {
+    bzero(query, sizeof(query));
+
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
     query_header->id = (unsigned short) htons(getpid());
     query_header->qr = 0; 
@@ -36,12 +38,16 @@ int sendQuery(struct sockaddr_in server, int socket_file_descriptor, char *hostn
         perror("Error al intentar enviar un mensaje al servidor. \n");
         exit(errno); 
     }  
+    
+    printf("mande \n");
 
     return strlen(qname) + 1;
 }
 
 unsigned char* receiveQuery(struct sockaddr_in server, int socket_file_descriptor)
 {
+    bzero(response, sizeof(response));
+
     int i = sizeof server; 
     if(recvfrom(socket_file_descriptor, response, sizeof(response), 0, (struct sockaddr*)&server, (socklen_t*)&i)<0)
     {
