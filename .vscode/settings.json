@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "dns_response_handler.h": "c"
+        "dns_response_handler.h": "c",
+        "typeinfo": "c"
     }
 }

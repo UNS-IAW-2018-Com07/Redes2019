@@ -31,8 +31,8 @@ void printResponse(
     printHeader(query_response_header);
 
     ntohs(query_response_header->an_count) > 0 ? printAnswers(ntohs(query_response_header->an_count), preferences, answers): NULL;
-    ntohs(query_response_header->ns_count) > 0 ? printAuthorities(ntohs(query_response_header->ns_count), auth):NULL;
-    ntohs(query_response_header->ar_count) > 0 ? printAdditional(ntohs(query_response_header->ar_count), addit):NULL;
+    ntohs(query_response_header->ns_count) > 0 ? printAuthorities(ntohs(query_response_header->ns_count), auth): NULL;
+    ntohs(query_response_header->ar_count) > 0 ? printAdditional(ntohs(query_response_header->ar_count), addit): NULL;
 }
 
 void printHeader(struct DNS_HEADER *query_response_header)

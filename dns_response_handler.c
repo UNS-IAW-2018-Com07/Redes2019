@@ -12,15 +12,23 @@ void handleResponse(unsigned char *response, int qname_length)
 {
     struct RES_RECORD answers[20], auth[20], addit[20];
     int* preferences;
+    unsigned char *reader;
 
     struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
-    unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
+    reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
    
     preferences = readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
     readAuthorities(ntohs(query_response_header->ns_count), reader, response, auth);
     readAdditional(ntohs(query_response_header->ar_count), reader, response, addit);
 
     printResponse(query_response_header, preferences, answers, auth, addit);
+
+    bzero(answers, sizeof(answers));
+    bzero(auth, sizeof(auth));
+    bzero(addit, sizeof(addit));
+    bzero(reader, sizeof(reader));
+    bzero(query_response_header, sizeof(struct DNS_HEADER));
+    free(preferences);
 }
 
 /*

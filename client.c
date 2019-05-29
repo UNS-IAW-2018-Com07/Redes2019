@@ -36,36 +36,38 @@ int main( int argc , char *argv[])
         exit(errno); 
     }
 
+    unsigned char *response;
+    int qname_length;
+
     if(getRD()) // Bit de recursión activado
     {
-        int qname_length = sendQuery(server, socket_file_descriptor, getHostname(), getQType());
-        unsigned char *response = receiveQuery(server, socket_file_descriptor);
+        qname_length = sendQuery(server, socket_file_descriptor, getHostname(), getQType());
+        response = receiveQuery(server, socket_file_descriptor);
+        handleResponse(response, qname_length);
+
+
+        printf("\n\n ACA VA LA SEGUNDA CONSULTA \n\n");
+        qname_length = sendQuery(server, socket_file_descriptor, "google.com", getQType());
+        response = receiveQuery(server, socket_file_descriptor);
         handleResponse(response, qname_length);
     }
     else // Hay que imprimir el trace
     {
         unsigned char *splited_hostname[100]; //almacena cada label en una posicion del arreglo
         int position = splitHostname(splited_hostname);
-        
+
         unsigned char hostname[100];
         while(position >= 0)
         {
-            printf("%i \n", position);
+            qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
+            response = receiveQuery(server, socket_file_descriptor);
+            handleResponse(response, qname_length);
             //pedir por lo que tiene hostname
             //si no tengo answer, leer el soa de authority, pedir la ip de ese que lei y a ese preguntarle por el hostname
             // mostrar las respuestas que obtuve
             prepareNextHostname(hostname, position, splited_hostname);
-            printf("%s \n", hostname);
             position--;
         }
-
-        /*
-        position = 0;
-        while(splited_hostname[position] != NULL )
-        {
-            printf("%s \n", splited_hostname[position]);
-            position++;
-        } */ 
 
         // int qname_length = sendQuery(server, socket_file_descriptor, ".", getQType());
         // unsigned char *response = receiveQuery(server, socket_file_descriptor);
@@ -100,13 +102,14 @@ int splitHostname(unsigned char **splited_hostname)
 void prepareNextHostname(unsigned char *hostname, int position, unsigned char **splited_hostname)
 {
     unsigned char aux[100];
-    strcpy(aux, hostname); 
-    strcpy(hostname, ".");
-    if(position == 0) // Evita que quede un punto al principio cuando esta el hostname completo (ejemplo: .cs.uns.edu.ar)
-    {
-        strcpy(hostname, "");
-    }
-    strcat(hostname, splited_hostname[position]);
+    strcpy(aux, ".");
+    strcat(aux, hostname); 
+    //strcpy(hostname, ".");
+    //if(position == 0) // Evita que quede un punto al principio cuando esta el hostname completo (ejemplo: .cs.uns.edu.ar)
+    //{
+    //    strcpy(hostname, "");
+    //}
+    strcpy(hostname, splited_hostname[position]);
     strcat(hostname, aux);
 }
 
