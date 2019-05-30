@@ -20,6 +20,8 @@ void printResourceClass(int class);
 void printResourceType(int type);
 void printAuthorities(int ns_count, struct RES_RECORD *auth);
 void printAdditional(int ar_count, struct RES_RECORD *addit);
+void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int preferences);
+int isTypeAccepted(int type); 
 
 void printResponse(
     struct DNS_HEADER *query_response_header, 
@@ -79,103 +81,96 @@ void printFlags(struct DNS_HEADER *query_response_header)
 
 void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
 {
-    struct sockaddr_in aux;
-    long *ipv4;
-
+    int unaccepted_responses = 0;
     printf(";; RESPUESTAS\n");
     for(int i = 0; i < ans_count; i++)
     {
-        printf("TTL: %i. ",ntohs(answers[i].resource_constant->ttl));
-        printResourceClass(ntohs(answers[i].resource_constant->_class));
-        printResourceType(ntohs(answers[i].resource_constant->type));
-        printf("%s ",answers[i].name);
-        
-        switch(ntohs(answers[i].resource_constant->type))
+        printLine(answers[i], &unaccepted_responses, preferences[i]);
+    }
+    printf("\nRespuestas sin visualizar: %i\n\n",unaccepted_responses);
+}
+
+
+void printAuthorities(int ns_count, struct RES_RECORD *auth)
+{
+    int unaccepted_responses = 0;
+    printf(";; AUTORITATIVOS\n");
+    for(int i = 0; i < ns_count; i++)
+    {
+        printLine(auth[i], &unaccepted_responses, 0);
+    }
+    printf("\nAutoritativos sin visualizar: %i\n\n",unaccepted_responses);
+}
+
+void printAdditional(int ar_count, struct RES_RECORD *addit)
+{
+    int unaccepted_responses = 0;
+    printf(";; ADICIONALES\n");
+    for(int i = 0; i < ar_count; i++)
+    {
+       printLine(addit[i], &unaccepted_responses, 0);
+    }
+    printf("\nAdicionales sin visualizar: %i\n\n",unaccepted_responses);
+}
+
+void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int preferences)
+{
+    if(isTypeAccepted(ntohs(rrecord.resource_constant->type)) == 1)
+    {
+        printf("%s.\t\t",rrecord.name);
+        printf("%i\t",ntohs(rrecord.resource_constant->ttl));
+        (ntohs(rrecord.resource_constant->_class) == 1) ? printf("IN\t"): printf("?\t");
+        printResourceType(ntohs(rrecord.resource_constant->type));
+
+        switch(ntohs(rrecord.resource_constant->type))
         {
             case T_A: 
             {
-                ipv4 = (long*)answers[i].rdata;
+                long *ipv4 = (long*)rrecord.rdata;
                 // Casteamos la respuesta a una direccion de internet del campo IN
+                struct sockaddr_in aux;
                 aux.sin_addr.s_addr = (*ipv4); 
                 // Convertimos el numero correspondiente al campo IN a una respresentacion en ASCII. 
-                printf("posee la dirección IPv4: %s\n\n", inet_ntoa(aux.sin_addr));
+                printf("%s\n", inet_ntoa(aux.sin_addr));
             }; break;
-
-            case T_CNAME:
-            {
-                printf("posee alias: %s\n\n", answers[i].rdata);
-            }; break;
-
-            case T_LOC:
-            {
-                printf("tiene la siguiente información geográfica: %s\n\n", answers[i].rdata);
-            }; break;
-
             case T_MX:
             {
-                printf("está a cargo del siguiente servidor de correo electrónico: %s", answers[i].rdata);
-                printf(" (prioridad = %i)\n\n", preferences[i]);
+                printf("%s ", rrecord.rdata);
+                printf(" (prioridad = %i)\n", preferences);
             }; break;
+            default: 
+            {
+                printf("%s\n", rrecord.rdata);
+            }
         }
+    }
+    else
+    {
+        (*unaccepted_responses)++;
     }
 }
 
-void printResourceClass(int class)
+int isTypeAccepted(int type)
 {
-    class == 1 ? printf("Clase: IN. "): printf("Clase: ?. ");
+    int result = 0;
+    if(type == T_A || type == T_NS || type == T_CNAME || type == T_SOA || 
+       type == T_PTR || type == T_MX || type == T_LOC)
+    {
+        result = 1;
+    }
+    return result; 
 }
 
 void printResourceType(int type)
 {
     switch(type)
     {
-        case T_A: printf("Tipo: A.\n"); break;
-        case T_NS: printf("Tipo: NS\n"); break;
-        case T_CNAME: printf("Tipo: CNAME\n"); break;
-        case T_SOA: printf("Tipo: SOA\n"); break;
-        case T_PTR: printf("Tipo: PTR\n"); break;
-        case T_MX: printf("Tipo: MX\n"); break;
-        case T_LOC: printf("Tipo: LOC\n"); break;
-        default: printf("Tipo: %i\n",type); break;
+        case T_A: printf("A\t"); break;
+        case T_NS: printf("NS\t"); break;
+        case T_CNAME: printf("CNAME\t"); break;
+        case T_SOA: printf("SOA\t"); break;
+        case T_PTR: printf("PTR\t"); break;
+        case T_MX: printf("MX\t"); break;
+        case T_LOC: printf("LOC\t"); break;
     } 
-}
-
-void printAuthorities(int ns_count, struct RES_RECORD *auth)
-{
-    printf(";; AUTORITATIVOS\n");
-    for(int i = 0; i < ns_count; i++)
-    {
-        printf("TTL: %i. ",ntohs(auth[i].resource_constant->ttl));
-        printResourceClass(ntohs(auth[i].resource_constant->_class));
-        printResourceType(ntohs(auth[i].resource_constant->type)); 
-        printf("%s ",auth[i].name);
-
-        if( ntohs(auth[i].resource_constant->type) == T_NS ||
-            ntohs(auth[i].resource_constant->type) == T_SOA )
-        {
-            printf("posee nameserver: %s\n", auth[i].rdata);
-        }
-    }
-}
-
-void printAdditional(int ar_count, struct RES_RECORD *addit)
-{
-    struct sockaddr_in aux;
-    long *ipv4;
-
-    printf(";; ADICIONALES\n");
-    for(int i = 0; i < ar_count; i++)
-    {
-        printf("TTL: %i. ",ntohs(addit[i].resource_constant->ttl));
-        printResourceClass(ntohs(addit[i].resource_constant->_class));
-        printResourceType(ntohs(addit[i].resource_constant->type)); 
-        printf("%s ",addit[i].name);
-
-        if(ntohs(addit[i].resource_constant->type) == T_A)
-        {
-            ipv4 = (long*) addit[i].rdata;
-            aux.sin_addr.s_addr = (*ipv4);
-            printf("posee la dirección IPv4: %s\n",inet_ntoa(aux.sin_addr));
-        }
-    }
 }

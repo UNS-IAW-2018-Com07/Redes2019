@@ -106,10 +106,17 @@ int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response,
                 answers[i].rdata = (unsigned char*)loc_ntoa(aux, NULL);
                 aux = aux + ntohs(answers[i].resource_constant->data_len);
             }; break;
+            case T_CNAME:
+            case T_PTR:
+            case T_SOA:
+            case T_NS:
+            {
+                answers[i].rdata = readName(aux, response, &stop);
+                aux = aux + ntohs(answers[i].resource_constant->data_len);
+            }
             default: 
             {
-                //No se si sirve para alguno de estos dos 
-                answers[i].rdata = readName(aux, response, &stop);
+                // Salteamos los RR que no sean los tipos de arriba
                 aux = aux + ntohs(answers[i].resource_constant->data_len);
             }    
         }
