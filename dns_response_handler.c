@@ -1,10 +1,11 @@
 #include "dns_response_handler.h"
 #include "location_reader.h"
 
-int* readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers);
-void readAuthorities(int ns_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *auth);
-void readAdditional(int ar_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *addit);
+int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *answers);
+void readAuthorities(int ns_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *auth);
+void readAdditional(int ar_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *addit);
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count); 
+void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit);
 
 int stop;
 
@@ -24,20 +25,38 @@ int handleResponse(unsigned char *response, int qname_length)
         result = EXIT_FAILURE;
     }
 
-    preferences = readAnswers(ntohs(query_response_header->an_count), reader, response, answers);
-    readAuthorities(ntohs(query_response_header->ns_count), reader, response, auth);
-    readAdditional(ntohs(query_response_header->ar_count), reader, response, addit);
+    preferences = readAnswers(ntohs(query_response_header->an_count), &reader, response, answers);
+    readAuthorities(ntohs(query_response_header->ns_count), &reader, response, auth);
+    readAdditional(ntohs(query_response_header->ar_count), &reader, response, addit);
 
     printResponse(query_response_header, preferences, answers, auth, addit);
+    freeVariables(query_response_header,preferences, answers, auth, addit);
+    //bzero(reader, sizeof(reader));  
+    return result;  
+}
 
-    bzero(answers, sizeof(answers));
-    bzero(auth, sizeof(auth));
-    bzero(addit, sizeof(addit));
-    bzero(reader, sizeof(reader));
-    bzero(query_response_header, sizeof(struct DNS_HEADER));
-    free(preferences);
-
-    return result;
+void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit)
+{
+    for(int i = 0; i < ntohs(query_response_header->an_count); i++)
+    {
+        free(answers[i].name);
+        free(answers[i].rdata);
+    }
+    for(int i = 0; i < ntohs(query_response_header->ns_count); i++)
+    {
+        free(auth[i].name);
+        free(auth[i].rdata); 
+    }
+    for(int i = 0; i < ntohs(query_response_header->ar_count); i++)
+    {
+        free(addit[i].name);
+        free(addit[i].rdata);
+    }
+    free(preferences); 
+    //bzero(answers, sizeof(answers));
+    //bzero(auth, sizeof(auth));
+    //bzero(addit, sizeof(addit));
+    //bzero(query_response_header, sizeof(struct DNS_HEADER));
 }
 
 /*
@@ -48,95 +67,101 @@ int handleResponse(unsigned char *response, int qname_length)
  * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
  * *answers  - Puntero al registro que almacenara las respuestas del DNS.
  */
-int* readAnswers(int ans_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *answers)
+int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *answers)
 {  
     stop = 0;
-    int* preferences = malloc(sizeof(int)*20);;
+    unsigned char *aux = *reader; 
+    int* preferences = malloc(sizeof(int)*20);
  
     for(int i = 0; i < ans_count; i++)
     {
-        answers[i].name = readName(reader, response, &stop);
-        reader = reader + stop;
+        answers[i].name = readName(aux, response, &stop);
+        aux = aux + stop;
  
-        answers[i].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
-        reader = reader + sizeof(struct RES_RECORD_CONSTANT);
+        answers[i].resource_constant = (struct RES_RECORD_CONSTANT*)(aux);
+        aux = aux + sizeof(struct RES_RECORD_CONSTANT);
 
         int answer_type = ntohs(answers[i].resource_constant->type);
         switch(answer_type)
         {
             case T_A:
             {
-                answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len));
+                answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource_constant->data_len)+1);
                 for(int j = 0; j < ntohs(answers[i].resource_constant->data_len); j++)
                 {
-                    answers[i].rdata[j]=reader[j];
+                    answers[i].rdata[j] = aux[j];
                 }
                 answers[i].rdata[ntohs(answers[i].resource_constant->data_len)] = '\0';
-                reader = reader + ntohs(answers[i].resource_constant->data_len);
+                aux = aux + ntohs(answers[i].resource_constant->data_len);
             }; break;
             case T_MX:
             {
-                preferences[i] = (int)reader[1];
-                reader = reader + 2;
-                answers[i].rdata = readName(reader, response, &stop);
-                reader = reader + stop;
+                preferences[i] = (int)aux[1];
+                aux = aux + 2;
+                answers[i].rdata = readName(aux, response, &stop);
+                aux = aux + stop;
             }; break;
             case T_LOC:
             {
-                answers[i].rdata = (unsigned char*)loc_ntoa(reader, NULL);
-                reader = reader + ntohs(answers[i].resource_constant->data_len);
+                answers[i].rdata = (unsigned char*)loc_ntoa(aux, NULL);
+                aux = aux + ntohs(answers[i].resource_constant->data_len);
             }; break;
             default: 
             {
                 //No se si sirve para alguno de estos dos 
-                answers[i].rdata = readName(reader, response, &stop);
-                reader = reader + stop;
+                answers[i].rdata = readName(aux, response, &stop);
+                aux = aux + stop;
             }    
         }
     }
-
+    *reader = aux; 
     return preferences; 
 }
 
-void readAuthorities(int ns_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *auth)
+void readAuthorities(int ns_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *auth)
 {
+    unsigned char *aux = *reader; 
     for(int i = 0; i < ns_count; i++)
     {
-        auth[i].name = readName(reader, response, &stop);
-        reader += stop;
-        auth[i].resource_constant = (struct RES_RECORD_CONSTANT*) reader;
-        reader += sizeof(struct RES_RECORD_CONSTANT);
+        auth[i].name = readName(aux, response, &stop);
+        aux += stop;
+        auth[i].resource_constant = (struct RES_RECORD_CONSTANT*) aux;
+        aux += sizeof(struct RES_RECORD_CONSTANT);
  
-        auth[i].rdata = readName(reader, response, &stop);
-        reader += stop;
+        auth[i].rdata = readName(aux, response, &stop);
+        aux += stop;
     }
+    *reader = aux;
 }
 
-void readAdditional(int ar_count, unsigned char *reader, unsigned char *response, struct RES_RECORD *addit)
+void readAdditional(int ar_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *addit)
 {
+    unsigned char *aux = *reader; 
     for(int i = 0; i < ar_count; i++)
     {
-        addit[i].name = readName(reader,response,&stop);
-        reader += stop;
+        addit[i].name = readName(aux,response,&stop);
+        aux += stop;
  
-        addit[i].resource_constant = (struct RES_RECORD_CONSTANT*) reader;
-        reader += sizeof(struct RES_RECORD_CONSTANT);
- 
+        addit[i].resource_constant = (struct RES_RECORD_CONSTANT*) aux;
+        aux += sizeof(struct RES_RECORD_CONSTANT);
+
         if(ntohs(addit[i].resource_constant->type) == T_A)
         {
-            addit[i].rdata = (unsigned char*) malloc(ntohs(addit[i].resource_constant->data_len));
+            addit[i].rdata = (unsigned char*) malloc(ntohs(addit[i].resource_constant->data_len)+1);
             for(int j = 0; j < ntohs(addit[i].resource_constant->data_len); j++)
-            addit[i].rdata[j] = reader[j];
- 
+            {
+                addit[i].rdata[j] = aux[j];
+            }
             addit[i].rdata[ntohs(addit[i].resource_constant->data_len)] = '\0';
-            reader += ntohs(addit[i].resource_constant->data_len);
+            aux += ntohs(addit[i].resource_constant->data_len);
         }
         else
         {
-            addit[i].rdata = readName(reader, response, &stop);
-            reader += stop;
+            addit[i].rdata = readName(aux, response, &stop);
+            aux += stop;
         }
     }
+    *reader = aux; 
 }
 
 /*

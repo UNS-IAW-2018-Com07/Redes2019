@@ -85,7 +85,7 @@ void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
     printf(";; RESPUESTAS\n");
     for(int i = 0; i < ans_count; i++)
     {
-        printf("TTL: %i. ",answers[i].resource_constant->ttl);
+        printf("TTL: %i. ",ntohs(answers[i].resource_constant->ttl));
         printResourceClass(ntohs(answers[i].resource_constant->_class));
         printResourceType(ntohs(answers[i].resource_constant->type));
         printf("%s ",answers[i].name);
@@ -145,7 +145,7 @@ void printAuthorities(int ns_count, struct RES_RECORD *auth)
     printf(";; AUTORITATIVOS\n");
     for(int i = 0; i < ns_count; i++)
     {
-        printf("TTL: %i. ",auth[i].resource_constant->ttl);
+        printf("TTL: %i. ",ntohs(auth[i].resource_constant->ttl));
         printResourceClass(ntohs(auth[i].resource_constant->_class));
         printResourceType(ntohs(auth[i].resource_constant->type)); 
         printf("%s ",auth[i].name);
@@ -166,7 +166,7 @@ void printAdditional(int ar_count, struct RES_RECORD *addit)
     printf(";; ADICIONALES\n");
     for(int i = 0; i < ar_count; i++)
     {
-        printf("TTL: %i. ",addit[i].resource_constant->ttl);
+        printf("TTL: %i. ",ntohs(addit[i].resource_constant->ttl));
         printResourceClass(ntohs(addit[i].resource_constant->_class));
         printResourceType(ntohs(addit[i].resource_constant->type)); 
         printf("%s ",addit[i].name);
