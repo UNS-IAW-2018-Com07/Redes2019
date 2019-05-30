@@ -13,7 +13,7 @@ int handleResponse(unsigned char *response, int qname_length)
 {
     int result = EXIT_SUCCESS;
 
-    struct RES_RECORD answers[20], auth[20], addit[20];
+    struct RES_RECORD answers[60], auth[60], addit[60];
     int* preferences;
     unsigned char *reader;
 
@@ -31,7 +31,7 @@ int handleResponse(unsigned char *response, int qname_length)
 
     printResponse(query_response_header, preferences, answers, auth, addit);
     freeVariables(query_response_header,preferences, answers, auth, addit);
-    //bzero(reader, sizeof(reader));  
+    bzero(reader, sizeof(reader));  
     return result;  
 }
 
@@ -53,10 +53,10 @@ void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, s
         free(addit[i].rdata);
     }
     free(preferences); 
-    //bzero(answers, sizeof(answers));
-    //bzero(auth, sizeof(auth));
-    //bzero(addit, sizeof(addit));
-    //bzero(query_response_header, sizeof(struct DNS_HEADER));
+    bzero(answers, sizeof(answers));
+    bzero(auth, sizeof(auth));
+    bzero(addit, sizeof(addit));
+    bzero(query_response_header, sizeof(struct DNS_HEADER));
 }
 
 /*
@@ -110,7 +110,7 @@ int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response,
             {
                 //No se si sirve para alguno de estos dos 
                 answers[i].rdata = readName(aux, response, &stop);
-                aux = aux + stop;
+                aux = aux + ntohs(answers[i].resource_constant->data_len);
             }    
         }
     }
@@ -127,9 +127,16 @@ void readAuthorities(int ns_count, unsigned char **reader, unsigned char *respon
         aux += stop;
         auth[i].resource_constant = (struct RES_RECORD_CONSTANT*) aux;
         aux += sizeof(struct RES_RECORD_CONSTANT);
- 
+    
         auth[i].rdata = readName(aux, response, &stop);
-        aux += stop;
+        if(ntohs(auth[i].resource_constant->type) == T_NS)
+        {
+            aux += stop;
+        }
+        else 
+        {
+            aux = aux + ntohs(auth[i].resource_constant->data_len);
+        }
     }
     *reader = aux;
 }
@@ -158,7 +165,7 @@ void readAdditional(int ar_count, unsigned char **reader, unsigned char *respons
         else
         {
             addit[i].rdata = readName(aux, response, &stop);
-            aux += stop;
+            aux = aux + ntohs(addit[i].resource_constant->data_len);
         }
     }
     *reader = aux; 

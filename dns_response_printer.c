@@ -136,7 +136,7 @@ void printResourceType(int type)
         case T_PTR: printf("Tipo: PTR\n"); break;
         case T_MX: printf("Tipo: MX\n"); break;
         case T_LOC: printf("Tipo: LOC\n"); break;
-        default: printf("Tipo: ?\n"); break;
+        default: printf("Tipo: %i\n",type); break;
     } 
 }
 
