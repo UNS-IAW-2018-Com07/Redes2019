@@ -11,8 +11,6 @@ int sendQuery(struct sockaddr_in server, int socket_file_descriptor, char *hostn
 {
     bzero(query, sizeof(query));
 
-    printf("HOSTANAME: %s", hostname);
-
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
     query_header->id = (unsigned short) htons(getpid());
     query_header->qr = 0; 

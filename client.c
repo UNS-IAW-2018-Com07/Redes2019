@@ -13,7 +13,6 @@
 #include "command_line_manager.h"
 #include "query_manager.h"
 
-in_addr_t getNextServer(unsigned char *response);
 int splitHostname(unsigned char **splited_hostname);
 void prepareNextHostname(unsigned char *hostname, int position, unsigned char **splited_hostname);
 
@@ -44,12 +43,6 @@ int main( int argc , char *argv[])
         qname_length = sendQuery(server, socket_file_descriptor, getHostname(), getQType());
         response = receiveQuery(server, socket_file_descriptor);
         handleResponse(response, qname_length);
-
-
-        printf("\n\n ACA VA LA SEGUNDA CONSULTA \n\n");
-        qname_length = sendQuery(server, socket_file_descriptor, "google.com", getQType());
-        response = receiveQuery(server, socket_file_descriptor);
-        handleResponse(response, qname_length);
     }
     else // Hay que imprimir el trace
     {
@@ -57,11 +50,24 @@ int main( int argc , char *argv[])
         int position = splitHostname(splited_hostname);
 
         unsigned char hostname[100];
+        unsigned char *serverHostname;
         while(position >= 0)
         {
             qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
             response = receiveQuery(server, socket_file_descriptor);
-            handleResponse(response, qname_length);
+            if(handleResponse(response, qname_length)==EXIT_FAILURE) // no pudo manejar la respuesta porque no habia answer (es decir, hay que pedir a otro server)
+            {
+                serverHostname = getServerHostname(response, qname_length);
+                qname_length = sendQuery(server, socket_file_descriptor, serverHostname, getQType());
+                response = receiveQuery(server, socket_file_descriptor);
+                //printf("\n---------------------mande a serverHostname: %s-----------------------\n", serverHostname);
+                //handleResponse(response, qname_length);
+                server.sin_addr.s_addr = getNextServer(response, qname_length);
+                qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
+                response = receiveQuery(server, socket_file_descriptor);
+                //printf("\n---------------------mande a server: %i-----------------------\n", server.sin_addr.s_addr);
+                handleResponse(response, qname_length);
+            }
             //pedir por lo que tiene hostname
             //si no tengo answer, leer el soa de authority, pedir la ip de ese que lei y a ese preguntarle por el hostname
             // mostrar las respuestas que obtuve
@@ -82,10 +88,6 @@ int main( int argc , char *argv[])
     return 0;
 }
 
-in_addr_t getNextServer(unsigned char *response) {
-    return inet_addr("8.8.8.8");
-}
-
 int splitHostname(unsigned char **splited_hostname)
 {
     int position = 0;
@@ -104,12 +106,6 @@ void prepareNextHostname(unsigned char *hostname, int position, unsigned char **
     unsigned char aux[100];
     strcpy(aux, ".");
     strcat(aux, hostname); 
-    //strcpy(hostname, ".");
-    //if(position == 0) // Evita que quede un punto al principio cuando esta el hostname completo (ejemplo: .cs.uns.edu.ar)
-    //{
-    //    strcpy(hostname, "");
-    //}
     strcpy(hostname, splited_hostname[position]);
     strcat(hostname, aux);
 }
-
