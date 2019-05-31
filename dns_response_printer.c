@@ -87,7 +87,7 @@ void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
     {
         printLine(answers[i], &unaccepted_responses, preferences[i]);
     }
-    printf("\nRespuestas sin visualizar: %i\n\n",unaccepted_responses);
+    (unaccepted_responses > 0) ? printf("; Respuestas sin visualizar: %i\n\n",unaccepted_responses): printf("\n");
 }
 
 
@@ -99,7 +99,7 @@ void printAuthorities(int ns_count, struct RES_RECORD *auth)
     {
         printLine(auth[i], &unaccepted_responses, 0);
     }
-    printf("\nAutoritativos sin visualizar: %i\n\n",unaccepted_responses);
+    (unaccepted_responses > 0) ? printf("; Autoritativos sin visualizar: %i\n\n",unaccepted_responses): printf("\n");
 }
 
 void printAdditional(int ar_count, struct RES_RECORD *addit)
@@ -110,7 +110,7 @@ void printAdditional(int ar_count, struct RES_RECORD *addit)
     {
        printLine(addit[i], &unaccepted_responses, 0);
     }
-    printf("\nAdicionales sin visualizar: %i\n\n",unaccepted_responses);
+    (unaccepted_responses > 0) ? printf("; Adicionales sin visualizar: %i\n\n",unaccepted_responses): printf("\n");
 }
 
 void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int preferences)
@@ -136,7 +136,7 @@ void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int prefere
             case T_MX:
             {
                 printf("%s ", rrecord.rdata);
-                printf(" (prioridad = %i)\n", preferences);
+                printf("(prioridad = %i)\n", preferences);
             }; break;
             default: 
             {
@@ -154,7 +154,7 @@ int isTypeAccepted(int type)
 {
     int result = 0;
     if(type == T_A || type == T_NS || type == T_CNAME || type == T_SOA || 
-       type == T_PTR || type == T_MX || type == T_LOC)
+       type == T_MX || type == T_LOC)
     {
         result = 1;
     }
@@ -169,7 +169,6 @@ void printResourceType(int type)
         case T_NS: printf("NS\t"); break;
         case T_CNAME: printf("CNAME\t"); break;
         case T_SOA: printf("SOA\t"); break;
-        case T_PTR: printf("PTR\t"); break;
         case T_MX: printf("MX\t"); break;
         case T_LOC: printf("LOC\t"); break;
     } 

@@ -111,7 +111,6 @@ int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response,
                 aux = aux + ntohs(answers[i].resource_constant->data_len);
             }; break;
             case T_CNAME:
-            case T_PTR:
             case T_SOA:
             case T_NS:
             {
