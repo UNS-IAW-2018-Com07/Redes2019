@@ -42,7 +42,7 @@ int main( int argc , char *argv[])
     {
         qname_length = sendQuery(server, socket_file_descriptor, getHostname(), getQType());
         response = receiveQuery(server, socket_file_descriptor);
-        handleResponse(response, qname_length);
+        handleResponse(response, qname_length, 1);
     }
     else // Hay que imprimir el trace
     {
@@ -55,34 +55,27 @@ int main( int argc , char *argv[])
         {
             qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
             response = receiveQuery(server, socket_file_descriptor);
-            if(handleResponse(response, qname_length)==EXIT_FAILURE) // no pudo manejar la respuesta porque no habia answer (es decir, hay que pedir a otro server)
+            if(handleResponse(response, qname_length, 1)==EXIT_FAILURE) // no pudo manejar la respuesta porque no habia answer (es decir, hay que pedir a otro server)
             {
+                
                 serverHostname = getServerHostname(response, qname_length);
+                
                 qname_length = sendQuery(server, socket_file_descriptor, serverHostname, getQType());
                 response = receiveQuery(server, socket_file_descriptor);
-                //printf("\n---------------------mande a serverHostname: %s-----------------------\n", serverHostname);
-                //handleResponse(response, qname_length);
+
+                handleResponse(response, qname_length, 1);
+
+                printf("\n PREGUNTA POR %s AL SIGUIENTE SERVER ", hostname);
+
                 server.sin_addr.s_addr = getNextServer(response, qname_length);
-                qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
-                response = receiveQuery(server, socket_file_descriptor);
-                //printf("\n---------------------mande a server: %i-----------------------\n", server.sin_addr.s_addr);
-                handleResponse(response, qname_length);
+                // qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
+                // response = receiveQuery(server, socket_file_descriptor);
+                
+                // handleResponse(response, qname_length, 1);
             }
-            //pedir por lo que tiene hostname
-            //si no tengo answer, leer el soa de authority, pedir la ip de ese que lei y a ese preguntarle por el hostname
-            // mostrar las respuestas que obtuve
             prepareNextHostname(hostname, position, splited_hostname);
             position--;
         }
-
-        // int qname_length = sendQuery(server, socket_file_descriptor, ".", getQType());
-        // unsigned char *response = receiveQuery(server, socket_file_descriptor);
-        // handleResponse(response, qname_length);
-
-        // server.sin_addr.s_addr = getNextServer(response);
-        // qname_length = sendQuery(server, socket_file_descriptor, "edu.ar", getQType());
-        // response = receiveQuery(server, socket_file_descriptor);
-        // handleResponse(response, qname_length);
     }
     
     return 0;

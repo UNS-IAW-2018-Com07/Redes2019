@@ -9,7 +9,7 @@ void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, s
 
 int stop;
 
-int handleResponse(unsigned char *response, int qname_length)
+int handleResponse(unsigned char *response, int qname_length, int show_if_no_answer)
 {
     int result = EXIT_SUCCESS;
 
@@ -23,6 +23,10 @@ int handleResponse(unsigned char *response, int qname_length)
     if(ntohs(query_response_header->an_count)==0)
     {
         result = EXIT_FAILURE;
+        if(!show_if_no_answer)
+        {
+            return result;
+        }
     }
 
     preferences = readAnswers(ntohs(query_response_header->an_count), &reader, response, answers);
@@ -256,22 +260,49 @@ unsigned char* getServerHostname(unsigned char *response, int qname_length)
     return readName(reader, response, &stop);
 }
 
+// in_addr_t getNextServer(unsigned char *response, int qname_length) 
+// {
+//     unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
+//     struct RES_RECORD answer[1];
+//     answer[1].name = readName(reader, response, &stop);
+//     reader = reader + stop;
+//     answer[1].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
+//     reader = reader + sizeof(struct RES_RECORD_CONSTANT);
+//     answer[1].rdata = (unsigned char*)malloc(ntohs(answer[1].resource_constant->data_len) + 1);
+//     for(int j = 0; j < ntohs(answer[1].resource_constant->data_len); j++)
+//     {
+//         answer[1].rdata[j]=reader[j];
+//     }
+//     answer[1].rdata[ntohs(answer[1].resource_constant->data_len)] = '\0';
+//     printf("\n SERVIDOR %s\n", answer[1].rdata);
+//     in_addr_t result = inet_addr(answer[1].rdata);
+//     free(answer[1].rdata);
+//     return result;
+// }
+
 in_addr_t getNextServer(unsigned char *response, int qname_length) 
 {
     unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
-    struct RES_RECORD answer[1];
-    answer[1].name = readName(reader, response, &stop);
-    reader = reader + stop;
-    answer[1].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
-    reader = reader + sizeof(struct RES_RECORD_CONSTANT);
-    answer[1].rdata = (unsigned char*)malloc(ntohs(answer[1].resource_constant->data_len) + 1);
+    struct RES_RECORD answer[1]; 
+    stop = 0;
+    unsigned char *aux = reader; 
+    readName(aux, response, &stop);
+    aux = aux + stop;
+    answer[1].resource_constant = (struct RES_RECORD_CONSTANT*)(aux);
+    aux = aux + sizeof(struct RES_RECORD_CONSTANT);
+    answer[1].rdata = (unsigned char*)malloc(ntohs(answer[1].resource_constant->data_len)+1);
     for(int j = 0; j < ntohs(answer[1].resource_constant->data_len); j++)
     {
-        answer[1].rdata[j]=reader[j];
+        answer[1].rdata[j] = aux[j];
     }
     answer[1].rdata[ntohs(answer[1].resource_constant->data_len)] = '\0';
-    printf("\n SERVIDOR %s\n", answer[1].rdata);
-    in_addr_t result = inet_addr(answer[1].rdata);
-    free(answer[1].rdata);
+    long *ipv4 = (long*)answer[1].rdata;
+    struct sockaddr_in aux_server;
+    aux_server.sin_addr.s_addr = (*ipv4);
+    printf("SERVIDOR %s\n", inet_ntoa(aux_server.sin_addr));
+    in_addr_t result = inet_addr(inet_ntoa(aux_server.sin_addr));
+    bzero(reader, sizeof(reader));
+    bzero(aux, sizeof(aux));
+    bzero(answer, sizeof(answer));
     return result;
 }

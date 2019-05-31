@@ -1,7 +1,7 @@
 #include <arpa/inet.h>
 #include "dns_response_printer.h"
 
-int handleResponse(unsigned char *response, int qname_length);
+int handleResponse(unsigned char *response, int qname_length, int show_if_no_answer);
 
 unsigned char* getServerHostname(unsigned char *response, int qname_length);
 

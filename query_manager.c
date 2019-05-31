@@ -10,6 +10,7 @@ unsigned char query[65536], response[65536];
 int sendQuery(struct sockaddr_in server, int socket_file_descriptor, char *hostname, unsigned short qtype)
 {
     bzero(query, sizeof(query));
+    printf("\n PREGUNTA POR EL %s \n", hostname);
 
     struct DNS_HEADER *query_header = (struct DNS_HEADER *) &query;
     query_header->id = (unsigned short) htons(getpid());
