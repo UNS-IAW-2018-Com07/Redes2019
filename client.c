@@ -53,29 +53,24 @@ int main( int argc , char *argv[])
         unsigned char *serverHostname;
         while(position >= 0)
         {
-            qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
+            qname_length = sendQuery(server, socket_file_descriptor, hostname, 2);
             response = receiveQuery(server, socket_file_descriptor);
-            if(handleResponse(response, qname_length, 1)==EXIT_FAILURE) // no pudo manejar la respuesta porque no habia answer (es decir, hay que pedir a otro server)
-            {
+            handleResponse(response, qname_length, 1);
+            // if(handleResponse(response, qname_length, 1)==EXIT_FAILURE) // no pudo manejar la respuesta porque no habia answer (es decir, hay que pedir a otro server)
+            // {                
+            //     // serverHostname = getServerHostname(response, qname_length);
                 
-                serverHostname = getServerHostname(response, qname_length);
-                
-                qname_length = sendQuery(server, socket_file_descriptor, serverHostname, getQType());
-                response = receiveQuery(server, socket_file_descriptor);
+            //     // qname_length = sendQuery(server, socket_file_descriptor, serverHostname, getQType());
+            //     // response = receiveQuery(server, socket_file_descriptor);
 
-                handleResponse(response, qname_length, 1);
-
-                printf("\n PREGUNTA POR %s AL SIGUIENTE SERVER ", hostname);
-
-                server.sin_addr.s_addr = getNextServer(response, qname_length);
-                // qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
-                // response = receiveQuery(server, socket_file_descriptor);
-                
-                // handleResponse(response, qname_length, 1);
-            }
+            //     // server.sin_addr.s_addr = getNextServer(response, qname_length);
+            // }
             prepareNextHostname(hostname, position, splited_hostname);
             position--;
         }
+        qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
+        response = receiveQuery(server, socket_file_descriptor);
+        handleResponse(response, qname_length, 1);
     }
     
     return 0;
