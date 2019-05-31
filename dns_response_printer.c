@@ -153,8 +153,8 @@ void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int prefere
 int isTypeAccepted(int type)
 {
     int result = 0;
-    if(type == T_A || type == T_NS || type == T_CNAME || type == T_SOA || 
-       type == T_MX || type == T_LOC)
+    if(type == T_A || type == T_NS ||  type == T_SOA || type == T_PTR ||
+       type == T_CNAME || type == T_MX || type == T_LOC)
     {
         result = 1;
     }
@@ -168,6 +168,7 @@ void printResourceType(int type)
         case T_A: printf("A\t"); break;
         case T_NS: printf("NS\t"); break;
         case T_CNAME: printf("CNAME\t"); break;
+        case T_PTR: printf("PTR\t"); break;
         case T_SOA: printf("SOA\t"); break;
         case T_MX: printf("MX\t"); break;
         case T_LOC: printf("LOC\t"); break;
