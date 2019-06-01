@@ -86,7 +86,7 @@ int main( int argc , char *argv[])
 
         qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
         response = receiveQuery(server, socket_file_descriptor);
-        handleResponse(response, qname_length, 1);
+        handleResponse(response, qname_length);
         free(dom_name);
     }
     
