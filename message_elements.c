@@ -36,8 +36,8 @@ void changeFromQNameFormatToNormalFormat(unsigned char* qname)
 
     if(qname_length == 0)
     {
-        // consultaron por el root.     
-        qname[1] = '\0';
+        // consultaron por el root.    
+        qname[0] = '\0'; 
         return; 
     }
 

@@ -3,6 +3,8 @@
 
 int handleResponse(unsigned char *response, int qname_length, int show_if_no_answer);
 
-unsigned char* getServerHostname(unsigned char *response, int qname_length);
+in_addr_t* getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name);
 
-in_addr_t getNextServer(unsigned char *response, int qname_length);
+//unsigned char* getServerHostname(unsigned char *response, int qname_length);
+
+//in_addr_t getNextServer(unsigned char *response, int qname_length);

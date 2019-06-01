@@ -51,11 +51,27 @@ int main( int argc , char *argv[])
 
         unsigned char hostname[100];
         unsigned char *serverHostname;
+        unsigned char *dom_name;
+        in_addr_t* server_aux;
+        
         while(position >= 0)
         {
-            qname_length = sendQuery(server, socket_file_descriptor, hostname, 2);
+            qname_length = sendQuery(server, socket_file_descriptor, hostname, 2);//T_NS
             response = receiveQuery(server, socket_file_descriptor);
-            handleResponse(response, qname_length, 1);
+            server_aux = getNextServer(response, hostname, qname_length, &dom_name);
+            
+            if(strlen(dom_name) > 0)
+            {
+                printf("entro a buscar por A del dom_name %s\n",dom_name);
+                qname_length = sendQuery(server, socket_file_descriptor, dom_name, 1);//T_A
+                response = receiveQuery(server, socket_file_descriptor);
+                server_aux = getNextServer(response, hostname, qname_length, &dom_name);
+            }
+
+            server.sin_addr.s_addr = *server_aux; 
+            printf("%d\n", server.sin_addr.s_addr);
+            printf("%s\n", inet_ntoa(server.sin_addr));
+            //handleResponse(response, qname_length, 1);
             // if(handleResponse(response, qname_length, 1)==EXIT_FAILURE) // no pudo manejar la respuesta porque no habia answer (es decir, hay que pedir a otro server)
             // {                
             //     // serverHostname = getServerHostname(response, qname_length);
@@ -66,11 +82,15 @@ int main( int argc , char *argv[])
             //     // server.sin_addr.s_addr = getNextServer(response, qname_length);
             // }
             prepareNextHostname(hostname, position, splited_hostname);
+            if(hostname[strlen(hostname)-1] == '.')
+            {
+                hostname[strlen(hostname)-1]='\0'; // Le saco el punto
+            }
             position--;
         }
-        qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
-        response = receiveQuery(server, socket_file_descriptor);
-        handleResponse(response, qname_length, 1);
+        //qname_length = sendQuery(server, socket_file_descriptor, hostname, getQType());
+        //response = receiveQuery(server, socket_file_descriptor);
+        //handleResponse(response, qname_length, 1);
     }
     
     return 0;
