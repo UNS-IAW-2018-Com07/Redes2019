@@ -7,6 +7,7 @@ void readAdditional(int ar_count, unsigned char **reader, unsigned char *respons
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count); 
 void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit);
 int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD *rrecord);
+int hasAllocated(int qtype);
 
 int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
 unsigned char* getDName(unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
@@ -49,23 +50,43 @@ void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, s
     for(int i = 0; i < ntohs(query_response_header->an_count); i++)
     {
         free(answers[i].name);
-        (ntohs(answers[i].resource_constant->type) != T_LOC) ? free(answers[i].rdata): NULL;
+        hasAllocated(ntohs(answers[i].resource_constant->type)) ? free(answers[i].rdata): NULL;
     }
     for(int i = 0; i < ntohs(query_response_header->ns_count); i++)
     {
         free(auth[i].name);
-        (ntohs(auth[i].resource_constant->type) != T_LOC) ? free(auth[i].rdata): NULL; 
+        hasAllocated(ntohs(auth[i].resource_constant->type)) ? free(auth[i].rdata): NULL;
     }
     for(int i = 0; i < ntohs(query_response_header->ar_count); i++)
     {
-        free(addit[i].name);
-        (ntohs(addit[i].resource_constant->type) != T_LOC) ? free(addit[i].rdata): NULL;
+       free(addit[i].name);
+       hasAllocated(ntohs(addit[i].resource_constant->type)) ? free(addit[i].rdata): NULL;
     }
     free(preferences); 
     bzero(answers, sizeof(answers));
     bzero(auth, sizeof(auth));
     bzero(addit, sizeof(addit));
     bzero(query_response_header, sizeof(struct DNS_HEADER));
+}
+
+int hasAllocated(int qtype)
+{
+    switch (qtype)
+    {
+        case T_A:
+        case T_MX:
+        case T_CNAME:
+        case T_PTR:
+        case T_SOA:
+        case T_NS:
+        {
+            return 1; //true;
+        }; 
+        default:
+        {
+            return 0; //false;
+        }
+    }
 }
 
 /*
