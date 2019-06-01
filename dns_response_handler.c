@@ -10,7 +10,7 @@ int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD 
 int hasAllocated(int qtype);
 
 int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
-unsigned char* getDName(unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
+void getDName(unsigned char **dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
 void getServerIP(in_addr_t *server, unsigned char *dom_name, int quantity, struct RES_RECORD *rrecords);
 
 int stop;
@@ -249,60 +249,65 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
     return name;
 }
 
-in_addr_t* getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name)
+void getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name, in_addr_t *server)
 {
     struct RES_RECORD answers[60], auth[60], addit[60];
     unsigned char *reader,*aux_reader;
-    in_addr_t *server = (in_addr_t *) malloc(sizeof(in_addr_t)); 
+    int* preferences; 
+    *server = 0;
 
     struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)]; 
 
-    readAnswers(ntohs(query_response_header->an_count), &reader, response, answers);
+    preferences = readAnswers(ntohs(query_response_header->an_count), &reader, response, answers);
     readAuthorities(ntohs(query_response_header->ns_count), &reader, response, auth);
     readAdditional(ntohs(query_response_header->ar_count), &reader, response, addit);
 
     // Buscamos por un RR de tipo A que se corresponda con el hostname
+    // Si existe entonces retornamos su ip para que sea el proximo server. 
     getServerIP(server, hostname, ntohs(query_response_header->an_count), answers);
     if(*server == 0)
     {
         getServerIP(server, hostname, ntohs(query_response_header->ns_count), auth);
-    }
-    if(*server > 0)
-    {
-        return server; 
+        if(*server == 0)
+        {
+            getServerIP(server, hostname, ntohs(query_response_header->ar_count), addit);
+        }
     }
 
     // Buscamos por un RR de tipo NS/SOA en el answer o authority su correspondiente
-    // ip en el additional. 
-    for(int i = 0; i < ntohs(query_response_header->ar_count); i++)
+    // ip en el additional (si es que no encontro un RR de tipo A). 
+    for(int i = 0; i < ntohs(query_response_header->ar_count) && *server == 0; i++)
     {
         if(isDomainName(addit[i].name, hostname, ntohs(query_response_header->an_count), answers) == 1)
         {
-            *server = *((long*)addit[i].rdata); // falta chequear que es de tipo A
-            return server; 
+            if(ntohs(addit[i].resource_constant->type) == T_A){
+                memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t)); 
+            }
         }
         
         if(isDomainName(addit[i].name, hostname, ntohs(query_response_header->ns_count), auth) == 1)
         {
-            *server = *((long*)addit[i].rdata); // falta chequear que es de tipo A
-            return server; 
+            if(ntohs(addit[i].resource_constant->type) == T_A){
+                memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t)); 
+            } 
         }
     }
 
     // Si no encontro un RR additional tal que mapee a un answer o authority entonces
     // buscamos el nombre de dominio de dicho hostname. (SOA/NS)
-    (*dom_name) = getDName(hostname, ntohs(query_response_header->an_count), answers); 
-    if(strlen(*dom_name)==0)
+    if(*server == 0)
     {
-        (*dom_name) = getDName(hostname, ntohs(query_response_header->ns_count), auth); 
-    }
-    // Hay que liberar rrecords y dom_name. 
+        getDName(dom_name, hostname, ntohs(query_response_header->an_count), answers); 
+        if(strlen(*dom_name)==0)
+        {
+            getDName(dom_name, hostname, ntohs(query_response_header->ns_count), auth); 
+        }
+    } 
     
-    //printResponse(query_response_header, preferences, answers, auth, addit);
-    //freeVariables(query_response_header, preferences, answers, auth, addit);
+    printResponse(query_response_header, preferences, answers, auth, addit);
+    freeVariables(query_response_header, preferences, answers, auth, addit);
     bzero(reader, sizeof(reader));  
-    return server;  
 }
 
 int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
@@ -324,9 +329,8 @@ int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity,
     return 0; 
 }
 
-unsigned char* getDName(unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
+void getDName(unsigned char **dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
 {
-    unsigned char* dom_name = (unsigned char*) malloc(sizeof(char)*256);
     for(int i = 0; i < quantity; i++)
     {
         if(strcmp(rrecords[i].name, hostname) == 0) 
@@ -334,37 +338,12 @@ unsigned char* getDName(unsigned char *hostname, int quantity, struct RES_RECORD
             if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
                ntohs(rrecords[i].resource_constant->type) == T_NS)
             {
-                strcpy(dom_name, rrecords[i].rdata);
-                return dom_name; 
+                strcpy(*dom_name, rrecords[i].rdata);
+                return; 
             }
         }
-    }
-    return dom_name; 
+    } 
 }
-
-/*
-in_addr_t getNextServer(unsigned char *response, unsigned char* soa_name, int qname_length)
-{
-    struct RES_RECORD rrecords[60];
-    unsigned char *reader;
-    in_addr_t server; 
-
-    struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
-    reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)]; 
-    server = getA(soa_name, ntohs(query_response_header->an_count), &reader, response, rrecords);
-    //if(strlen(server) == 0) 
-    //{
-    //    bzero(rrecords, sizeof(rrecords)); /// Hay que liberar
-    //    getSOA(hostname, ntohs(query_response_header->ns_count), &reader, response, rrecords);
-    //}
-    // Hay que liberar rrecords. 
-    
-    //printResponse(query_response_header, preferences, answers, auth, addit);
-    //freeVariables(query_response_header, preferences, answers, auth, addit);
-    bzero(reader, sizeof(reader));  
-    return server;  
-}
-*/
 
 void getServerIP(in_addr_t* server, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
 {
@@ -375,68 +354,9 @@ void getServerIP(in_addr_t* server, unsigned char *hostname, int quantity, struc
         {
             if(ntohs(rrecords[i].resource_constant->type) == T_A)
             {
-                ipv4 = (long*)rrecords[i].rdata;
-                *server = *ipv4;
+                memcpy(server,((long*)rrecords[i].rdata),sizeof(in_addr_t)); 
+                return; 
             }
         }
     }
 }
-
-/*
-unsigned char* getServerHostname(unsigned char *response, int qname_length)
-{
-    unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
-    readName(reader, response, &stop); //me salteo el nombre
-    reader += stop + sizeof(struct RES_RECORD_CONSTANT);
-    return readName(reader, response, &stop);
-}
-*/
-
-// in_addr_t getNextServer(unsigned char *response, int qname_length) 
-// {
-//     unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
-//     struct RES_RECORD answer[1];
-//     answer[1].name = readName(reader, response, &stop);
-//     reader = reader + stop;
-//     answer[1].resource_constant = (struct RES_RECORD_CONSTANT*)reader;
-//     reader = reader + sizeof(struct RES_RECORD_CONSTANT);
-//     answer[1].rdata = (unsigned char*)malloc(ntohs(answer[1].resource_constant->data_len) + 1);
-//     for(int j = 0; j < ntohs(answer[1].resource_constant->data_len); j++)
-//     {
-//         answer[1].rdata[j]=reader[j];
-//     }
-//     answer[1].rdata[ntohs(answer[1].resource_constant->data_len)] = '\0';
-//     printf("\n SERVIDOR %s\n", answer[1].rdata);
-//     in_addr_t result = inet_addr(answer[1].rdata);
-//     free(answer[1].rdata);
-//     return result;
-// }
-
-/*
-in_addr_t getNextServer(unsigned char *response, int qname_length) 
-{
-    unsigned char *reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
-    struct RES_RECORD answer[1]; 
-    int stop_aux = 0;
-    unsigned char *aux = reader; 
-    readName(aux, response, &stop_aux);
-    aux = aux + stop_aux;
-    answer[1].resource_constant = (struct RES_RECORD_CONSTANT*)(aux);
-    aux = aux + sizeof(struct RES_RECORD_CONSTANT);
-    answer[1].rdata = (unsigned char*)malloc(ntohs(answer[1].resource_constant->data_len)+1);
-    for(int j = 0; j < ntohs(answer[1].resource_constant->data_len); j++)
-    {
-        answer[1].rdata[j] = aux[j];
-    }
-    answer[1].rdata[ntohs(answer[1].resource_constant->data_len)] = '\0';
-    long *ipv4 = (long*)answer[1].rdata;
-    struct sockaddr_in aux_server;
-    aux_server.sin_addr.s_addr = (*ipv4);
-    printf("SERVIDOR %s\n", inet_ntoa(aux_server.sin_addr));
-    in_addr_t result = inet_addr(inet_ntoa(aux_server.sin_addr));
-    bzero(reader, sizeof(reader));
-    bzero(aux, sizeof(aux));
-    bzero(answer, sizeof(answer));
-    return result;
-}
-*/
