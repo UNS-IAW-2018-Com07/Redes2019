@@ -15,7 +15,7 @@ void getServerIP(in_addr_t *server, unsigned char *dom_name, int quantity, struc
 
 int stop;
 
-int handleResponse(unsigned char *response, int qname_length, int show_if_no_answer)
+void handleResponse(unsigned char *response, int qname_length)
 {
     int result = EXIT_SUCCESS;
 
@@ -25,15 +25,6 @@ int handleResponse(unsigned char *response, int qname_length, int show_if_no_ans
 
     struct DNS_HEADER *query_response_header = (struct DNS_HEADER *) response;
     reader = &response[sizeof(struct DNS_HEADER) + qname_length + sizeof(struct QUESTION_CONSTANT)];
-   
-    if(ntohs(query_response_header->an_count)==0)
-    {
-        result = EXIT_FAILURE;
-        if(!show_if_no_answer)
-        {
-            return result;
-        }
-    }
 
     preferences = readAnswers(ntohs(query_response_header->an_count), &reader, response, answers);
     readAuthorities(ntohs(query_response_header->ns_count), &reader, response, auth);
@@ -42,7 +33,6 @@ int handleResponse(unsigned char *response, int qname_length, int show_if_no_ans
     printResponse(query_response_header, preferences, answers, auth, addit);
     freeVariables(query_response_header, preferences, answers, auth, addit);
     bzero(reader, sizeof(reader));  
-    return result;  
 }
 
 void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit)
@@ -151,7 +141,7 @@ int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD 
         }; break;
         case T_MX:
         {
-            preference = (int)aux[1];
+            preference = (int)(aux[0]*256 + aux[1]);
             aux = aux + 2;
             (*rrecord).rdata = readName(aux, response, &stop);
             aux = aux + stop;
