@@ -17,11 +17,17 @@ unsigned short rd_entered = 0;
 
 in_addr_t getDefaultDNSServer();
 
+/*
+ * Muestra por pantalla cómo se debe utilizar el programa.
+*/
 void showUsage()
 {
-    printf("\nUsage: query consulta @servidor[:puerto] [-a | -mx | -loc] [-r | -t] [-h] \n\n");
+    printf("\nUsage: dnsquery consulta @servidor[:puerto] [-a | -mx | -loc] [-r | -t] [-h] \n\n");
 }
 
+/*
+ * Muestra por pantalla la ayuda del programa.
+*/
 void showHelp()
 {
     showUsage();
@@ -34,18 +40,26 @@ void showHelp()
     printf("  -h          Muestra la ayuda. \n\n");
 }
 
+/*
+ * Muestra por pantalla que hubo un error por el mal uso de las opciones del programa.
+*/
 void showWrongOptionsError()
 {
     printf("\nError: Mal uso de las opciones.");
     showUsage();
 }
 
+/*
+ * Muestra por pantalla que hubo un error.
+ * *error_message - Mensaje de error que se muestra por pantalla.
+*/
 void showError(char *error_message)
 {
     printf("\nError: %s", error_message);
     showUsage();
 }
 
+// Opciones que tiene el programa.
 struct argp_option options[] = 
 {
     { 0, 'a', 0, 0, 0 },
@@ -57,6 +71,12 @@ struct argp_option options[] =
     { 0 }
 };
 
+/*
+ * Función llamada por argp para ayudar a definir un comportamiento a cada una de las opciones.
+ * key - Clave de la opción que se va ejecutar.
+ * *arg - Arreglo que contiene el argumento que no fue parte de una opción.
+ * *state - Utilizado cuando se quiere volver a llamar a parse_opt para mantener valores entre las llamadas.
+*/
 int parse_opt(int key, char *arg, struct argp_state *state)
 {
     switch(key)
@@ -179,6 +199,7 @@ struct argp argp = { options, parse_opt, 0, 0};
 
 void setInputValues(int argc, char* argv[])
 {
+    // Utiliza la librería argp para administrar los argumentos del programa.
     error_t error = argp_parse(&argp, argc, argv, ARGP_NO_HELP, 0, 0);
     if(error)
     {
@@ -224,7 +245,7 @@ unsigned char getRD()
 }
 
 /*
- * Obtiene el servidor dns del archivo /etc/resolv.conf
+ * Obtiene el servidor dns del archivo /etc/resolv.conf y lo retorna.
  * */
 in_addr_t getDefaultDNSServer()
 {

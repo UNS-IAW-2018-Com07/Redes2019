@@ -1,4 +1,4 @@
-/**
+/*
  * Código extraido de RFC 1876
 */
 
@@ -21,7 +21,6 @@
 
 #include "location_reader.h"
 
-/* takes an on-the-wire LOC RR and formats it in a human readable format. */
 const char *loc_ntoa(const unsigned char *binary, char *ascii)
 {
 	static char *error = "?";
@@ -129,7 +128,10 @@ const char *loc_ntoa(const unsigned char *binary, char *ascii)
 static unsigned int poweroften[10] = {1, 10, 100, 1000, 10000, 100000,
 				      1000000,10000000,100000000,1000000000};
 
-/* takes an XeY precision/size value, returns a string representation. */
+/*
+ * Toma un valor XeY y retorna su representación en string.
+ * prec - Tamaño del valor.
+*/
 const char *precsize_ntoa(u_int8_t prec)
 {
 	static char retbuf[sizeof "90000000.00"];	/* XXX nonreentrant */

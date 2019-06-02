@@ -16,7 +16,12 @@
 int splitHostname(unsigned char **splited_hostname);
 void prepareNextHostname(unsigned char *hostname, int position, unsigned char **splited_hostname);
 
-int main( int argc , char *argv[])
+/*
+ * Ejecuta el programa.
+ * argc - Cantidad de argumentos.
+ * *argv - Arreglo que contiene los argumentos del programa.
+*/
+int main(int argc , char *argv[])
 {
     setInputValues(argc,argv);
     
@@ -100,6 +105,10 @@ int main( int argc , char *argv[])
     return 0;
 }
 
+/*
+ * Separa cada label de la consulta ingresada por el usuario.
+ * **splited_hostname - Arreglo donde se almacena cada una de las labels.
+*/
 int splitHostname(unsigned char **splited_hostname)
 {
     int position = 0;
@@ -113,6 +122,12 @@ int splitHostname(unsigned char **splited_hostname)
     return position;
 }
 
+/*
+ * Concatena la siguiente label al hostname actual.
+ * *hostname - Nombre de dominio actual.
+ * position - Posición en la cual se encuentra la siguiente label a concatenar.
+ * **splited_hostname - Arreglo que contiene las labels.
+*/
 void prepareNextHostname(unsigned char *hostname, int position, unsigned char **splited_hostname)
 {
     unsigned char aux[100];
