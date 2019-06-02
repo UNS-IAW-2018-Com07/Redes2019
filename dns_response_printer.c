@@ -37,6 +37,10 @@ void printResponse(
     ntohs(query_response_header->ar_count) > 0 ? printAdditional(ntohs(query_response_header->ar_count), addit): NULL;
 }
 
+/* 
+ * Imprime por consola el encabezado de la consulta realizada al DNS.
+ * *query_response_header - Puntero al encabezado de la respuesta a la consulta realizada al DNS.
+ */
 void printHeader(struct DNS_HEADER *query_response_header)
 {
     printf("\n;; ENCABEZADO\n");
@@ -49,6 +53,10 @@ void printHeader(struct DNS_HEADER *query_response_header)
     printf("Adicionales: %d.\n\n",ntohs(query_response_header->ar_count));
 }
 
+/* 
+ * Imprime por consola el estado de la consulta realizada al DNS segun el RFC 1035 (Acepta del 0-5)
+ * rcode - Codigo de respuesta de la consulta realizada. 
+ */
 void printAnswerCode(int rcode)
 {
     printf(" Estado: ");
@@ -64,6 +72,10 @@ void printAnswerCode(int rcode)
     }
 }
 
+/* 
+ * Imprime por consola las flags que se encuentran en el encabezado: Recursion Desired (rd), TrunCation (tc), Recursion Available (ra) y Authoritative Answer (aa). 
+ * *query_response_header - Puntero al encabezado de la respuesta a la consulta realizada al DNS.
+ */
 void printFlags(struct DNS_HEADER *query_response_header)
 {
     query_response_header->rd == 0 ? printf("; Iterativa."): printf("; Recursiva.");
@@ -73,12 +85,11 @@ void printFlags(struct DNS_HEADER *query_response_header)
 }
 
 /*
- * Imprime en la consola la respuesta de la consulta realizada al DNS.
- * ans_count - Cantidad de repuestas que el DNS proporciono para una determinada 
- *            consulta (en el formato del host).
- * *answers - Puntero al registro que almacena la respuesta del DNS. 
+ * Imprime en la consola la respuesta almacenada en la seccion ASNWER de la consulta realizada al DNS.
+ * ans_count - Cantidad de repuestas (seccion ANSWER) que el DNS proporciono para una determinada consulta.
+ * *answers - Puntero a los registros que almacenan las respuestas de la seccion ANSWER.
+ * *preferences - Puntero a ans_count enteros que almacenan el valor correspondiente al campo preference de una respuesta MX.
  */
-
 void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
 {
     int unaccepted_responses = 0;
@@ -90,7 +101,11 @@ void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
     (unaccepted_responses > 0) ? printf("; Respuestas sin visualizar: %i\n\n",unaccepted_responses): printf("\n");
 }
 
-
+/*
+ * Imprime en la consola la respuesta almacenada en la seccion AUTHORITY de la consulta realizada al DNS.
+ * ns_count - Cantidad de repuestas de RR autoritativos que el DNS proporciono para una determinada consulta.
+ * *auth - Puntero a los registros que almacenan las respuestas de la seccion AUTHORITY.
+ */
 void printAuthorities(int ns_count, struct RES_RECORD *auth)
 {
     int unaccepted_responses = 0;
@@ -102,6 +117,11 @@ void printAuthorities(int ns_count, struct RES_RECORD *auth)
     (unaccepted_responses > 0) ? printf("; Autoritativos sin visualizar: %i\n\n",unaccepted_responses): printf("\n");
 }
 
+/*
+ * Imprime en la consola la respuesta almacenada en la seccion ADDITIONAL de la consulta realizada al DNS.
+ * ar_count - Cantidad de repuestas de RR adicionales que el DNS proporciono para una determinada consulta.
+ * *addit - Puntero a los registros que almacenan las respuestas de la seccion ADDITIONAL.
+ */
 void printAdditional(int ar_count, struct RES_RECORD *addit)
 {
     int unaccepted_responses = 0;
@@ -113,6 +133,12 @@ void printAdditional(int ar_count, struct RES_RECORD *addit)
     (unaccepted_responses > 0) ? printf("; Adicionales sin visualizar: %i\n\n",unaccepted_responses): printf("\n");
 }
 
+/*
+ * Imprime en la consola la respuesta almacenada en un RR.
+ * rrecord - RR a imprimir por pantalla.
+ * preferences - Si el RR es de tipo MX entonces se imprimira el valor almacenado en esta variable. 
+ * *unaccepted_responses - Puntero a la cantidad de registros que poseen tipo de respuesta incompatible con el programa. Si el RR actual no es compatible entonces se incrementa en uno lo apuntado por esta variable.
+ */
 void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int preferences)
 {
     if(isTypeAccepted(ntohs(rrecord.resource_constant->type)) == 1)
@@ -150,6 +176,10 @@ void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int prefere
     }
 }
 
+/*
+ * Determina si el tipo es compatible con el programa. Retorna 1 cuando es compatible y 0 cuando no lo es. 
+ * type - Entero que representa el tipo del RR. 
+ */
 int isTypeAccepted(int type)
 {
     int result = 0;
@@ -161,6 +191,10 @@ int isTypeAccepted(int type)
     return result; 
 }
 
+/*
+ * Imprime por consola el tipo del RR en formato legible para el usuario. 
+ * type - Entero que representa el tipo del RR. 
+ */
 void printResourceType(int type)
 {
     switch(type)

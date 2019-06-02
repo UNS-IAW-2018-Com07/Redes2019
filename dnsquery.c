@@ -57,7 +57,6 @@ int main( int argc , char *argv[])
         
         while(position >= -1)
         {
-            printf("\n AFUERA \n");
             qname_length = sendQuery(server, socket_file_descriptor, hostname, 2);//T_NS
             response = receiveQuery(server, socket_file_descriptor);
             getNextServer(response, hostname, qname_length, &dom_name, &ip_server, 0);
@@ -66,7 +65,6 @@ int main( int argc , char *argv[])
 
             while(strlen(dom_name) > 0 && strcmp(first_dom_name, dom_name)==0)
             {
-                printf("\n ADENTRO \n");
                 bzero(dom_name,sizeof(dom_name));
                 qname_length = sendQuery(server, socket_file_descriptor, first_dom_name, 1);//T_A
                 response = receiveQuery(server, socket_file_descriptor);
@@ -125,9 +123,4 @@ void prepareNextHostname(unsigned char *hostname, int position, unsigned char **
     strcat(aux, hostname); 
     strcpy(hostname, splited_hostname[position]);
     strcat(hostname, aux);
-
-    // if(hostname[strlen(hostname)-1] == '.')
-    // {
-    //     hostname[strlen(hostname)-1]='\0'; // Le saco el punto
-    // }
 }

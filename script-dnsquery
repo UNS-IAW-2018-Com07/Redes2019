@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo
+gcc dnsquery.c command_line_manager.c location_reader.c query_manager.c message_elements.c dns_response_handler.c dns_response_printer.c -o dnsquery
+
+echo "Para ejecutar el programa realizar:"
+echo
+echo "./dnsquery consulta @servidor[:puerto] [-a | -mx | -loc] [-r | -t] [-h]"
+echo
+echo "Para mas informacion utilizar el comando -h"
+echo
