@@ -7,8 +7,7 @@ void readAdditional(int ar_count, unsigned char **reader, unsigned char *respons
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count); 
 void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit);
 int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD *rrecord);
-int hasAllocated(int qtype);
-
+int hasAllocated(int type);
 int isDomainName(unsigned char* dom_name, int quantity, struct RES_RECORD *rrecords);
 void getDName(unsigned char **dom_name, int quantity, struct RES_RECORD *rrecords);
 void getServerIP(in_addr_t *server, unsigned char *dom_name, int quantity, struct RES_RECORD *rrecords);
@@ -35,7 +34,15 @@ void handleResponse(unsigned char *response, int qname_length)
     bzero(reader, sizeof(reader));  
 }
 
-void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit)
+/*
+ * Realiza un free de las variables si es necesario y las reinicia en cero. 
+ * *query_response_header - Puntero al encabezado de la consulta realizada al DNS. 
+ * *preferences - Puntero a los valores de las distintas preferencias de los RR de tipo MX para la seccion ANSWER. 
+ * *answers - Puntero a los registros que almacenan las respuestas de la seccion ANSWER.
+ * *auth - Puntero a los registros que almacenan las respuestas de la seccion AUTHORITY.
+ * *addit - Puntero a los registros que almacenan las respuestas de la seccion ADDITIONAL.
+ */
+void freeVariables(struct DNS_HEADER *query_response_header, int *preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit)
 {
     for(int i = 0; i < ntohs(query_response_header->an_count); i++)
     {
@@ -59,9 +66,14 @@ void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, s
     bzero(query_response_header, sizeof(struct DNS_HEADER));
 }
 
-int hasAllocated(int qtype)
+/*
+ * Determina si para el tipo de RR dado se debio realizar malloc.
+ * Retorna 1 si se debio realizar malloc y retorna 0 cuando no.  
+ * type - Tipo del RR.
+ */
+int hasAllocated(int type)
 {
-    switch (qtype)
+    switch (type)
     {
         case T_A:
         case T_MX:
@@ -80,12 +92,12 @@ int hasAllocated(int qtype)
 }
 
 /*
- * Lee las respuestas proporcionadas por el DNS de acuerdo a su tipo: A, MX, LOC, CNAME, entre otros. 
- * ans_count - Cantidad de repuestas que el DNS proporciono para una determinada 
- *             consulta (en el formato del host).
- * *reader   - Puntero a la seccion ANSWER de la consulta realizada al DNS. 
+ * Lee los RR de la seccion ANSWER proporcionada por el DNS de acuerdo a su tipo: A, MX, LOC, CNAME, entre otros. 
+ * Retorna un arreglo de enteros que representa la preferencia de cada una de las consultas MX. Si el RR no era de tipo MX entonces en la posicion se almacenara un cero. 
+ * ans_count - Cantidad de repuestas de la seccion ANSWER.
+ * **reader - Puntero a un puntero que apunta al comienzo de la seccion ANSWER. 
  * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
- * *answers  - Puntero al registro que almacenara las respuestas del DNS.
+ * *answers - Puntero al registro que almacenara las respuestas de la seccion ANSWER.
  */
 int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *answers)
 {  
@@ -99,6 +111,13 @@ int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response,
     return preferences; 
 }
 
+/*
+ * Lee las respuestas proporcionadas por el DNS de acuerdo a su tipo: A, MX, LOC, CNAME, entre otros. 
+ * ns_count - Cantidad de repuestas de la seccion AUTHORITY.
+ * **reader - Puntero a un puntero que apunta al comienzo de la seccion AUTHORITY. 
+ * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
+ * *auth - Puntero al registro que almacenara las respuestas de la seccion AUTHORITY.
+ */
 void readAuthorities(int ns_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *auth)
 {
     for(int i = 0; i < ns_count; i++)
@@ -107,6 +126,13 @@ void readAuthorities(int ns_count, unsigned char **reader, unsigned char *respon
     }
 }
 
+/*
+ * Lee las respuestas proporcionadas por el DNS de acuerdo a su tipo: A, MX, LOC, CNAME, entre otros. 
+ * ar_count - Cantidad de repuestas de la seccion ADDITIONAL.
+ * **reader - Puntero a un puntero que apunta al comienzo de la seccion ADDITIONAL. 
+ * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
+ * *addit - Puntero al registro que almacenara las respuestas de la seccion ADDITIONAL.
+ */
 void readAdditional(int ar_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *addit)
 {
     for(int i = 0; i < ar_count; i++)
@@ -115,6 +141,13 @@ void readAdditional(int ar_count, unsigned char **reader, unsigned char *respons
     }
 }
 
+/*
+ * Lee un RR a partir de la respuesta y un puntero al comienzo de la linea que se desea leer. 
+ * Retorna un entero que se corresponde con el campo preference del RR de tipo MX. Si el rrecord leido es de otro tipo, el metodo retorna cero.  
+ * **reader - Puntero a un puntero que apunta a la posicion de comienzo de un RR de la respuesta. 
+ * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
+ * *rrecord - Retorna el RR leido de la respuesta.  
+ */
 int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD *rrecord)
 {
     unsigned char *aux = *reader;
@@ -183,12 +216,10 @@ int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD 
 */
 
 /*
- * Obtiene un nombre de dominio a partir de la respuesta. 
- * *reader   - Puntero a la posicion del comienzo de un nombre de dominio que se encuentra 
- *             en la seccion ANSWER de la consulta realizada al DNS. 
+ * Retorna un nombre de dominio a partir de la respuesta. 
+ * *reader - Puntero a la posicion del comienzo de un nombre de dominio que se encuentra en la seccion ANSWER de la consulta realizada al DNS. 
  * *response - Puntero al comienzo de la respuesta proporcionada por el DNS.  
- * *count    - Puntero que retorna las posiciones que el reader se movio. Depende si el nombre de dominio 
- *             era un puntero (se mueve dos) o un string (se mueve la cantidad de caracteres de dicho string) 
+ * *count - Puntero que retorna las posiciones que el reader se movio. Depende si el nombre de dominio era un puntero (se mueve dos) o un string (se mueve la cantidad de caracteres de dicho string) 
  */
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count)
 {
@@ -238,10 +269,6 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
     return name;
 }
 
-/*
- * 
- * 
- */
 void getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name, in_addr_t *server, int change_dom_name)
 {
     struct RES_RECORD answers[60], auth[60], addit[60];
