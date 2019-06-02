@@ -304,8 +304,8 @@ int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity,
 {
     for(int i = 0; i < quantity; i++)
     {
-        if(strcmp(rrecords[i].name, hostname) == 0) 
-        {
+        //if(strcmp(rrecords[i].name, hostname) == 0) 
+        //{
             if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
                ntohs(rrecords[i].resource_constant->type) == T_NS)
             {
@@ -314,7 +314,7 @@ int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity,
                     return 1; 
                 }
             }
-        }
+        //}
     }
     return 0; 
 }
@@ -323,15 +323,15 @@ void getDName(unsigned char **dom_name, unsigned char *hostname, int quantity, s
 {
     for(int i = 0; i < quantity; i++)
     {
-        if(strcmp(rrecords[i].name, hostname) == 0) 
-        {
+        //if(strcmp(rrecords[i].name, hostname) == 0) 
+        //{
             if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
                ntohs(rrecords[i].resource_constant->type) == T_NS)
             {
                 strcpy(*dom_name, rrecords[i].rdata);
                 return; 
             }
-        }
+        //}
     } 
 }
 
