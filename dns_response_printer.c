@@ -39,7 +39,7 @@ void printResponse(
 
 /* 
  * Imprime por consola el encabezado de la consulta realizada al DNS.
- * *query_response_header - Puntero al encabezado de la respuesta a la consulta realizada al DNS.
+ * *query_response_header - Puntero al inicio del encabezado de la respuesta.
  */
 void printHeader(struct DNS_HEADER *query_response_header)
 {
@@ -74,7 +74,7 @@ void printAnswerCode(int rcode)
 
 /* 
  * Imprime por consola las flags que se encuentran en el encabezado: Recursion Desired (rd), TrunCation (tc), Recursion Available (ra) y Authoritative Answer (aa). 
- * *query_response_header - Puntero al encabezado de la respuesta a la consulta realizada al DNS.
+ * *query_response_header - Puntero al inicio del encabezado de la respuesta.
  */
 void printFlags(struct DNS_HEADER *query_response_header)
 {

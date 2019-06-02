@@ -9,8 +9,8 @@ void freeVariables(struct DNS_HEADER *query_response_header, int* preferences, s
 int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD *rrecord);
 int hasAllocated(int qtype);
 
-int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
-void getDName(unsigned char **dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords);
+int isDomainName(unsigned char* dom_name, int quantity, struct RES_RECORD *rrecords);
+void getDName(unsigned char **dom_name, int quantity, struct RES_RECORD *rrecords);
 void getServerIP(in_addr_t *server, unsigned char *dom_name, int quantity, struct RES_RECORD *rrecords);
 
 int stop;
@@ -190,7 +190,6 @@ int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD 
  * *count    - Puntero que retorna las posiciones que el reader se movio. Depende si el nombre de dominio 
  *             era un puntero (se mueve dos) o un string (se mueve la cantidad de caracteres de dicho string) 
  */
-
 unsigned char* readName(unsigned char *reader, unsigned char *response, int *count)
 {
     unsigned char *name = (unsigned char*) malloc(256);
@@ -239,6 +238,10 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
     return name;
 }
 
+/*
+ * 
+ * 
+ */
 void getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name, in_addr_t *server, int change_dom_name)
 {
     struct RES_RECORD answers[60], auth[60], addit[60];
@@ -269,7 +272,7 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
     // ip en el additional (si es que no encontro un RR de tipo A). 
     for(int i = 0; i < ntohs(query_response_header->ar_count) && *server == 0; i++)
     {
-        if(isDomainName(addit[i].name, hostname, ntohs(query_response_header->an_count), answers) == 1)
+        if(isDomainName(addit[i].name, ntohs(query_response_header->an_count), answers) == 1)
         {
             if(ntohs(addit[i].resource_constant->type) == T_A){
                 memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t));
@@ -278,7 +281,7 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
             }
         }
         
-        if(isDomainName(addit[i].name, hostname, ntohs(query_response_header->ns_count), auth) == 1)
+        if(isDomainName(addit[i].name, ntohs(query_response_header->ns_count), auth) == 1)
         {
             if(ntohs(addit[i].resource_constant->type) == T_A){
                 memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t));
@@ -289,13 +292,13 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
     }
 
     // Si no encontro un RR additional tal que mapee a un answer o authority entonces
-    // buscamos el nombre de dominio de dicho hostname. (SOA/NS)
+    // buscamos el nombre de dominio. (SOA/NS)
     if(*server == 0)
     {
-        getDName(dom_name, hostname, ntohs(query_response_header->an_count), answers); 
+        getDName(dom_name, ntohs(query_response_header->an_count), answers); 
         if(strlen(*dom_name)==0)
         {
-            getDName(dom_name, hostname, ntohs(query_response_header->ns_count), auth); 
+            getDName(dom_name, ntohs(query_response_header->ns_count), auth); 
         }
     } 
     
@@ -304,43 +307,58 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
     bzero(reader, sizeof(reader));  
 }
 
-int isDomainName(unsigned char* dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
+/* 
+ * Verifica si un nombre de dominio (dom_name) es autoritativo para algun otro nombre de dominio. 
+ * Retorna 1 si es autoritativo y, caso contrario retorna 0.   
+ * *dom_name - Puntero que almacena el nombre de dominio a consultar (si es autoritativo o no).  
+ * quantity - Cantidad de RR que se encuentran almacenados en *rrecords. 
+ * *records - Conjunto de RR en donde se buscara si el nombre de dominio es autoritativo. 
+ */
+int isDomainName(unsigned char* dom_name, int quantity, struct RES_RECORD *rrecords)
 {
     for(int i = 0; i < quantity; i++)
     {
-        //if(strcmp(rrecords[i].name, hostname) == 0) 
-        //{
-            if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
-               ntohs(rrecords[i].resource_constant->type) == T_NS)
+        if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
+            ntohs(rrecords[i].resource_constant->type) == T_NS)
+        {
+            if(strcmp(dom_name, rrecords[i].rdata))
             {
-                if(strcmp(dom_name, rrecords[i].rdata))
-                {
-                    return 1; 
-                }
+                return 1; 
             }
-        //}
+        }
     }
     return 0; 
 }
 
-void getDName(unsigned char **dom_name, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
+/* 
+ * Obtiene el primer nombre de dominio autoritativo (RR de tipo NS o SOA) que se encuentre en *rrecords.   
+ * **dom_name - Puntero que retorna la respuesta. Si no existen RR de tipo NS o SOA entonces la variable se mantiene con su valor original.
+ * quantity - Cantidad de RR que se encuentran almacenados en *rrecords. 
+ * *records - Conjunto de RR en donde se buscara el nombre de dominio autoritativo. 
+ */
+void getDName(unsigned char **dom_name, int quantity, struct RES_RECORD *rrecords)
 {
     for(int i = 0; i < quantity; i++)
     {
-        //if(strcmp(rrecords[i].name, hostname) == 0) 
-        //{
-            if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
-               ntohs(rrecords[i].resource_constant->type) == T_NS)
-            {
-                strcpy(*dom_name, rrecords[i].rdata);
-                return; 
-            }
-        //}
+        if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
+            ntohs(rrecords[i].resource_constant->type) == T_NS)
+        {
+            strcpy(*dom_name, rrecords[i].rdata);
+            return; 
+        }
     } 
 }
 
+/* 
+ * Para un determinado hostname, recorre los RR proporcionados y obtiene el valor de su IP (si existe). 
+ * *server - Puntero que retorna la respuesta. Si existe una IP que se corresponde con el hostname se la almacena en formato in_addr_t. Caso contrario, retorna una IP vacia (0.0.0.0). 
+ * *hostname - Cadena de caracteres por la cual se desea obtener la IP. 
+ * quantity - Cantidad de RR que se encuentran almacenados en *rrecords. 
+ * *records - Conjunto de RR en donde se buscara la IP. 
+ */
 void getServerIP(in_addr_t* server, unsigned char *hostname, int quantity, struct RES_RECORD *rrecords)
 {
+    *server = 0; 
     long *ipv4 = 0;
     for(int i = 0; i < quantity; i++)
     {
