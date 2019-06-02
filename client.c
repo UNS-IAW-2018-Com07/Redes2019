@@ -50,23 +50,32 @@ int main( int argc , char *argv[])
         int position = splitHostname(splited_hostname);
 
         unsigned char hostname[100];
+        unsigned char first_dom_name[100];
         unsigned char *serverHostname;
         unsigned char *dom_name = (unsigned char *) malloc(sizeof(unsigned char)*256);
         in_addr_t ip_server;
         
         while(position >= -1)
         {
+            printf("\n AFUERA \n");
             qname_length = sendQuery(server, socket_file_descriptor, hostname, 2);//T_NS
             response = receiveQuery(server, socket_file_descriptor);
             getNextServer(response, hostname, qname_length, &dom_name, &ip_server);
             
-            if(strlen(dom_name) > 0)
+            strcpy(first_dom_name, dom_name);
+
+            while(strlen(dom_name) > 0 && strcmp(first_dom_name, dom_name)==0)
             {
-                qname_length = sendQuery(server, socket_file_descriptor, dom_name, 1);//T_A
-                response = receiveQuery(server, socket_file_descriptor);
-                getNextServer(response, dom_name, qname_length, &dom_name, &ip_server);
-                
+                printf("\n ADENTRO \n");
                 bzero(dom_name,sizeof(dom_name));
+                qname_length = sendQuery(server, socket_file_descriptor, first_dom_name, 1);//T_A
+                response = receiveQuery(server, socket_file_descriptor);
+                getNextServer(response, first_dom_name, qname_length, &dom_name, &ip_server);
+                
+                if(ip_server != 0) 
+                {
+                    server.sin_addr.s_addr = ip_server; 
+                }
             }
 
             // Chequeo que no me haya respondido servidor vacio en la consulta anterior
@@ -109,13 +118,16 @@ int splitHostname(unsigned char **splited_hostname)
 void prepareNextHostname(unsigned char *hostname, int position, unsigned char **splited_hostname)
 {
     unsigned char aux[100];
-    strcpy(aux, ".");
+    if(hostname != NULL ) 
+    {
+        strcpy(aux, ".");
+    }
     strcat(aux, hostname); 
     strcpy(hostname, splited_hostname[position]);
     strcat(hostname, aux);
 
-    if(hostname[strlen(hostname)-1] == '.')
-    {
-        hostname[strlen(hostname)-1]='\0'; // Le saco el punto
-    }
+    // if(hostname[strlen(hostname)-1] == '.')
+    // {
+    //     hostname[strlen(hostname)-1]='\0'; // Le saco el punto
+    // }
 }

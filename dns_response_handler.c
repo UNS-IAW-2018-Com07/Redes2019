@@ -272,14 +272,16 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
         if(isDomainName(addit[i].name, hostname, ntohs(query_response_header->an_count), answers) == 1)
         {
             if(ntohs(addit[i].resource_constant->type) == T_A){
-                memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t)); 
+                memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t));
+                memcpy(*dom_name,hostname,sizeof(*dom_name)); 
             }
         }
         
         if(isDomainName(addit[i].name, hostname, ntohs(query_response_header->ns_count), auth) == 1)
         {
             if(ntohs(addit[i].resource_constant->type) == T_A){
-                memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t)); 
+                memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t));
+                memcpy(*dom_name,hostname,sizeof(*dom_name));  
             } 
         }
     }
