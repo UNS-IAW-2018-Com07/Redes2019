@@ -239,7 +239,7 @@ unsigned char* readName(unsigned char *reader, unsigned char *response, int *cou
     return name;
 }
 
-void getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name, in_addr_t *server)
+void getNextServer(unsigned char *response, unsigned char* hostname, int qname_length, unsigned char **dom_name, in_addr_t *server, int change_dom_name)
 {
     struct RES_RECORD answers[60], auth[60], addit[60];
     unsigned char *reader,*aux_reader;
@@ -273,7 +273,8 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
         {
             if(ntohs(addit[i].resource_constant->type) == T_A){
                 memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t));
-                memcpy(*dom_name,hostname,sizeof(*dom_name)); 
+                if(change_dom_name)
+                    memcpy(*dom_name,hostname,sizeof(*dom_name)); //si pregunto afuera del while esto no se deberia mandar
             }
         }
         
@@ -281,7 +282,8 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
         {
             if(ntohs(addit[i].resource_constant->type) == T_A){
                 memcpy(server,((long*)addit[i].rdata),sizeof(in_addr_t));
-                memcpy(*dom_name,hostname,sizeof(*dom_name));  
+                if(change_dom_name)
+                    memcpy(*dom_name,hostname,sizeof(*dom_name));  
             } 
         }
     }

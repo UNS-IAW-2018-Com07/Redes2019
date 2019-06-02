@@ -60,7 +60,7 @@ int main( int argc , char *argv[])
             printf("\n AFUERA \n");
             qname_length = sendQuery(server, socket_file_descriptor, hostname, 2);//T_NS
             response = receiveQuery(server, socket_file_descriptor);
-            getNextServer(response, hostname, qname_length, &dom_name, &ip_server);
+            getNextServer(response, hostname, qname_length, &dom_name, &ip_server, 0);
             
             strcpy(first_dom_name, dom_name);
 
@@ -70,7 +70,7 @@ int main( int argc , char *argv[])
                 bzero(dom_name,sizeof(dom_name));
                 qname_length = sendQuery(server, socket_file_descriptor, first_dom_name, 1);//T_A
                 response = receiveQuery(server, socket_file_descriptor);
-                getNextServer(response, first_dom_name, qname_length, &dom_name, &ip_server);
+                getNextServer(response, first_dom_name, qname_length, &dom_name, &ip_server, 1);
                 
                 if(ip_server != 0) 
                 {
