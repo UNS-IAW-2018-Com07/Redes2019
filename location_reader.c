@@ -21,6 +21,28 @@
 
 #include "location_reader.h"
 
+static unsigned int poweroften[10] = {1, 10, 100, 1000, 10000, 100000,
+				      1000000,10000000,100000000,1000000000};
+
+/*
+ * Toma un valor XeY y retorna su representación en string.
+ * prec - Tamaño del valor.
+*/
+const char *precsize_ntoa(u_int8_t prec)
+{
+	static char retbuf[sizeof "90000000.00"];	/* XXX nonreentrant */
+	unsigned long val;
+	int mantissa, exponent;
+
+	mantissa = (int)((prec >> 4) & 0x0f) % 10;
+	exponent = (int)((prec >> 0) & 0x0f) % 10;
+
+	val = mantissa * poweroften[exponent];
+
+	(void) sprintf(retbuf, "%ld.%.2ld", val/100, val%100);
+	return (retbuf);
+}
+
 const char *loc_ntoa(const unsigned char *binary, char *ascii)
 {
 	static char *error = "?";
@@ -123,26 +145,4 @@ const char *loc_ntoa(const unsigned char *binary, char *ascii)
 		free(vpstr);
 
 	return (ascii);
-}
-
-static unsigned int poweroften[10] = {1, 10, 100, 1000, 10000, 100000,
-				      1000000,10000000,100000000,1000000000};
-
-/*
- * Toma un valor XeY y retorna su representación en string.
- * prec - Tamaño del valor.
-*/
-const char *precsize_ntoa(u_int8_t prec)
-{
-	static char retbuf[sizeof "90000000.00"];	/* XXX nonreentrant */
-	unsigned long val;
-	int mantissa, exponent;
-
-	mantissa = (int)((prec >> 4) & 0x0f) % 10;
-	exponent = (int)((prec >> 0) & 0x0f) % 10;
-
-	val = mantissa * poweroften[exponent];
-
-	(void) sprintf(retbuf, "%ld.%.2ld", val/100, val%100);
-	return (retbuf);
 }

@@ -22,7 +22,7 @@ in_addr_t getDefaultDNSServer();
 */
 void showUsage()
 {
-    printf("\nUsage: dnsquery consulta @servidor[:puerto] [-a | -mx | -loc] [-r | -t] [-h] \n\n");
+    printf("\nUsage: dnsquery consulta @servidor[:puerto] [-a | --mx | --loc] [-r | -t] [-h] \n\n");
 }
 
 /*
@@ -31,7 +31,9 @@ void showUsage()
 void showHelp()
 {
     showUsage();
-    printf("  :puerto     \n");
+    printf("  consulta    Consulta que se desea resolver. \n");
+    printf("  @servidor   Servidor DNS encargado de resolver la consulta. \n");
+    printf("  :puerto     Indica el puerto donde esta ligado el servidor DNS ingresado.\n");
     printf("  -a          La consulta se trata de un nombre simbólico y se desea conocer su correspondiente IP numerico asociado. \n");
     printf("  --mx        Determina el servidor a cargo de la recepción de correo electrónico para el dominio indicado en la consulta. \n");
     printf("  --loc       Información relativa a la ubicación geográfica del dominio indicado en la consulta. \n");
