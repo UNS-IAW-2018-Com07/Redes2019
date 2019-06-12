@@ -94,7 +94,9 @@ void printAnswers(int ans_count, int* preferences, struct RES_RECORD *answers)
 {
     int unaccepted_responses = 0;
     printf(";; RESPUESTAS\n");
-    for(int i = 0; i < ans_count; i++)
+    int i; 
+    
+    for(i = 0; i < ans_count; i++)
     {
         printLine(answers[i], &unaccepted_responses, preferences[i]);
     }
@@ -110,7 +112,9 @@ void printAuthorities(int ns_count, struct RES_RECORD *auth)
 {
     int unaccepted_responses = 0;
     printf(";; AUTORITATIVOS\n");
-    for(int i = 0; i < ns_count; i++)
+    int i; 
+    
+    for(i = 0; i < ns_count; i++)
     {
         printLine(auth[i], &unaccepted_responses, 0);
     }
@@ -126,7 +130,9 @@ void printAdditional(int ar_count, struct RES_RECORD *addit)
 {
     int unaccepted_responses = 0;
     printf(";; ADICIONALES\n");
-    for(int i = 0; i < ar_count; i++)
+    int i; 
+    
+    for(i = 0; i < ar_count; i++)
     {
        printLine(addit[i], &unaccepted_responses, 0);
     }
@@ -143,8 +149,10 @@ void printLine(struct RES_RECORD rrecord, int *unaccepted_responses, int prefere
 {
     if(isTypeAccepted(ntohs(rrecord.resource_constant->type)) == 1)
     {
+		char *ttl_a = rrecord.resource_constant->ttl;
+		int ttl = ((((int)ttl_a[0])*256 + ((int)ttl_a[1]))*256 +((int)ttl_a[2]))*256 + ((int)ttl_a[3]);
         printf("%s.\t\t",rrecord.name);
-        printf("%i\t",ntohs(rrecord.resource_constant->ttl));
+        printf("%i\t",ttl);
         (ntohs(rrecord.resource_constant->_class) == 1) ? printf("IN\t"): printf("?\t");
         printResourceType(ntohs(rrecord.resource_constant->type));
 

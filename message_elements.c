@@ -2,8 +2,8 @@
 
 void changeToQNameFormat(unsigned char* qname, char* hostname) 
 {
-    int host_length = strlen(hostname) + 1;
-    char *host_copy = malloc(sizeof(host_length));
+    int host_length = strlen(hostname) + 2;
+    char host_copy[host_length];
     strcpy(host_copy, hostname);
     strcat((char *) host_copy, ".");
 
@@ -26,13 +26,12 @@ void changeToQNameFormat(unsigned char* qname, char* hostname)
         }
     }
     *qname='\0';
-    free(host_copy);
 }
 
 void changeFromQNameFormatToNormalFormat(unsigned char* qname) 
 {
     int qname_length =  (int) strlen((const char*) qname);
-    int position_length = 0, i;
+    int position_length = 0, i,j;
 
     if(qname_length == 0)
     {
@@ -44,7 +43,7 @@ void changeFromQNameFormatToNormalFormat(unsigned char* qname)
     for(i = 0; i < qname_length; i++) 
     {
         position_length = qname[i];
-        for(int j = 0; j < (int)position_length; j++) 
+        for(j = 0; j < (int)position_length; j++) 
         {
             qname[i] = qname[i+1];
             i++;

@@ -55,6 +55,7 @@ int main(int argc , char *argv[])
         int position = splitHostname(splited_hostname);
 
         unsigned char hostname[100];
+        hostname[0]='\0';
         unsigned char first_dom_name[100];
         unsigned char *serverHostname;
         unsigned char *dom_name = (unsigned char *) malloc(sizeof(unsigned char)*256);

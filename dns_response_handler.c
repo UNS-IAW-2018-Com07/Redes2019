@@ -44,17 +44,18 @@ void handleResponse(unsigned char *response, int qname_length)
  */
 void freeVariables(struct DNS_HEADER *query_response_header, int *preferences, struct RES_RECORD *answers, struct RES_RECORD *auth, struct RES_RECORD *addit)
 {
-    for(int i = 0; i < ntohs(query_response_header->an_count); i++)
+	int i;
+    for(i = 0; i < ntohs(query_response_header->an_count); i++)
     {
         free(answers[i].name);
         hasAllocated(ntohs(answers[i].resource_constant->type)) ? free(answers[i].rdata): NULL;
     }
-    for(int i = 0; i < ntohs(query_response_header->ns_count); i++)
+    for(i = 0; i < ntohs(query_response_header->ns_count); i++)
     {
         free(auth[i].name);
         hasAllocated(ntohs(auth[i].resource_constant->type)) ? free(auth[i].rdata): NULL;
     }
-    for(int i = 0; i < ntohs(query_response_header->ar_count); i++)
+    for(i = 0; i < ntohs(query_response_header->ar_count); i++)
     {
        free(addit[i].name);
        hasAllocated(ntohs(addit[i].resource_constant->type)) ? free(addit[i].rdata): NULL;
@@ -103,8 +104,9 @@ int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response,
 {  
     stop = 0;
     int* preferences = malloc(sizeof(int)*60);
- 
-    for(int i = 0; i < ans_count; i++)
+	int i;
+	
+    for(i = 0; i < ans_count; i++)
     {
         preferences[i] = readLine(reader, response, &answers[i]);
     }
@@ -120,7 +122,8 @@ int* readAnswers(int ans_count, unsigned char **reader, unsigned char *response,
  */
 void readAuthorities(int ns_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *auth)
 {
-    for(int i = 0; i < ns_count; i++)
+	int i; 
+    for(i = 0; i < ns_count; i++)
     {
         readLine(reader, response, &auth[i]);
     }
@@ -135,7 +138,8 @@ void readAuthorities(int ns_count, unsigned char **reader, unsigned char *respon
  */
 void readAdditional(int ar_count, unsigned char **reader, unsigned char *response, struct RES_RECORD *addit)
 {
-    for(int i = 0; i < ar_count; i++)
+	int i;
+    for(i = 0; i < ar_count; i++)
     {
         readLine(reader, response, &addit[i]);
     }
@@ -165,7 +169,8 @@ int readLine(unsigned char **reader, unsigned char *response, struct RES_RECORD 
         case T_A:
         {
             (*rrecord).rdata = (unsigned char*)malloc(ntohs((*rrecord).resource_constant->data_len)+1);
-            for(int j = 0; j < ntohs((*rrecord).resource_constant->data_len); j++)
+            int j;
+            for(j = 0; j < ntohs((*rrecord).resource_constant->data_len); j++)
             {
                 (*rrecord).rdata[j] = aux[j];
             }
@@ -297,7 +302,8 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
 
     // Buscamos por un RR de tipo NS/SOA en el answer o authority su correspondiente
     // ip en el additional (si es que no encontro un RR de tipo A). 
-    for(int i = 0; i < ntohs(query_response_header->ar_count) && *server == 0; i++)
+    int i;
+    for(i = 0; i < ntohs(query_response_header->ar_count) && *server == 0; i++)
     {
         if(isDomainName(addit[i].name, ntohs(query_response_header->an_count), answers) == 1)
         {
@@ -343,7 +349,8 @@ void getNextServer(unsigned char *response, unsigned char* hostname, int qname_l
  */
 int isDomainName(unsigned char* dom_name, int quantity, struct RES_RECORD *rrecords)
 {
-    for(int i = 0; i < quantity; i++)
+	int i; 
+    for(i = 0; i < quantity; i++)
     {
         if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
             ntohs(rrecords[i].resource_constant->type) == T_NS)
@@ -365,7 +372,8 @@ int isDomainName(unsigned char* dom_name, int quantity, struct RES_RECORD *rreco
  */
 void getDName(unsigned char **dom_name, int quantity, struct RES_RECORD *rrecords)
 {
-    for(int i = 0; i < quantity; i++)
+	int i;
+    for(i = 0; i < quantity; i++)
     {
         if(ntohs(rrecords[i].resource_constant->type) == T_SOA ||
             ntohs(rrecords[i].resource_constant->type) == T_NS)
@@ -387,7 +395,8 @@ void getServerIP(in_addr_t* server, unsigned char *hostname, int quantity, struc
 {
     *server = 0; 
     long *ipv4 = 0;
-    for(int i = 0; i < quantity; i++)
+    int i; 
+    for(i = 0; i < quantity; i++)
     {
         if(strcmp(rrecords[i].name, hostname) == 0) 
         {

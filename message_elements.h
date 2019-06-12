@@ -48,7 +48,7 @@ struct RES_RECORD_CONSTANT
                             * */
 
     unsigned short _class;   // clase de los datos que se encuentran en el campo rdata
-    unsigned int ttl;        // tiempo en segundos que el resource record puede ser cacheado antes de ser descartado (tiempo de vida)
+    unsigned char ttl[4];        // tiempo en segundos que el resource record puede ser cacheado antes de ser descartado (tiempo de vida)
     unsigned short data_len; // tamanio en bytes del campo rdata
 };
 #pragma pack(pop)
